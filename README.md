@@ -1,12 +1,11 @@
 <div align="center">
 
-# 🛡️ Securi Report
+# Securi Report
 
 **Professional Penetration Testing Report Generator**
 
 A modern, security-hardened web application for managing penetration test engagements, generating professional reports with LaTeX support, and collaborating across security teams.
 
-[![CI](https://github.com/YOUR_USERNAME/securi-report/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/securi-report/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![OWASP](https://img.shields.io/badge/OWASP-2025%20Hardened-green.svg)](#-security)
 
@@ -14,7 +13,7 @@ A modern, security-hardened web application for managing penetration test engage
 
 ---
 
-## ✨ Features
+## Features
 
 | Category | Details |
 |---|---|
@@ -30,7 +29,7 @@ A modern, security-hardened web application for managing penetration test engage
 | **Role-Based Access** | Administrator, Editor, and Viewer roles with granular permissions |
 | **Security Tools** | Built-in JSON formatter, hashing/encryption, and encoder/decoder utilities |
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 - **Framework:** [Next.js 16](https://nextjs.org/) (App Router, React 19, Server Actions)
 - **Database:** MySQL 8 with [Drizzle ORM](https://orm.drizzle.team/)
@@ -42,7 +41,7 @@ A modern, security-hardened web application for managing penetration test engage
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -100,7 +99,7 @@ This starts:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
@@ -124,7 +123,7 @@ src/
 
 ---
 
-## 🔄 Collaboration Workflow
+## Collaboration Workflow
 
 Securi Report uses a **Draft-to-Master** merge workflow for team engagements:
 
@@ -143,7 +142,7 @@ Admin generates PDF    →  Deliverable
 
 ---
 
-## 🔒 Security
+## Security
 
 Securi Report is hardened against the **OWASP Top 10 (2025)**:
 
@@ -162,7 +161,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting guidelines.
 
 ---
 
-## 🧪 CI/CD
+## CI/CD
 
 GitHub Actions pipeline (`.github/workflows/ci.yml`):
 
@@ -177,7 +176,7 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`):
 
 ---
 
-## ⚙️ Environment Variables
+## Environment Variables
 
 See [`.env.example`](.env.example) for the full list. Key variables:
 
@@ -193,7 +192,7 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/my-feature`
@@ -203,7 +202,7 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
@@ -211,6 +210,6 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 <div align="center">
 
-Built with ❤️ for the security community
+Built with serious for DefendIT360
 
 </div>
