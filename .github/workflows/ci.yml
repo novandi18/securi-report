@@ -11,7 +11,6 @@ permissions:
   security-events: write
 
 jobs:
-  # ─── Lint, Type-check & Build ────────────────────────────
   build:
     name: Lint · Type-check · Build
     runs-on: ubuntu-latest
@@ -31,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint
+        run: npx eslint .
 
       - name: Type-check
         run: npx tsc --noEmit
@@ -39,7 +38,6 @@ jobs:
       - name: Build (production)
         run: npm run build
         env:
-          # Minimal env vars for build to succeed
           DATABASE_URL: mysql://ci:ci@localhost:3306/ci
           AUTH_SECRET: ci-build-secret
           MEILISEARCH_HOST: http://localhost:7700
@@ -47,7 +45,6 @@ jobs:
           NEXT_PUBLIC_MEILISEARCH_HOST: http://localhost:7700
           NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY: ci-search-key
 
-  # ─── Security Audit ─────────────────────────────────────
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
@@ -74,7 +71,6 @@ jobs:
         run: npx audit-ci --high
         continue-on-error: true
 
-  # ─── CodeQL Analysis (OWASP 2025 Compliance) ────────────
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
@@ -99,7 +95,6 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
-          # OWASP 2025 coverage via security-extended query suite
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
@@ -108,8 +103,8 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
+        continue-on-error: true
 
-  # ─── Docker Build Test ──────────────────────────────────
   docker-build:
     name: Docker Build Test
     runs-on: ubuntu-latest

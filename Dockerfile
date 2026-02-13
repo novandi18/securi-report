@@ -23,7 +23,24 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Dummy build-time env vars so Next.js page collection succeeds.
+# These are NEVER used at runtime — real values come from docker-compose / .env.
+ENV DATABASE_URL="mysql://build:build@localhost:3306/build"
+ENV AUTH_SECRET="build-placeholder"
+ENV MEILISEARCH_HOST="http://localhost:7700"
+ENV MEILISEARCH_ADMIN_KEY="build-placeholder"
+ENV NEXT_PUBLIC_MEILISEARCH_HOST="http://localhost:7700"
+ENV NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY="build-placeholder"
+
 RUN npm run build
+
+# Clear dummy values so they don't leak into the runner stage
+ENV DATABASE_URL=""
+ENV AUTH_SECRET=""
+ENV MEILISEARCH_HOST=""
+ENV MEILISEARCH_ADMIN_KEY=""
+ENV NEXT_PUBLIC_MEILISEARCH_HOST=""
+ENV NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY=""
 
 # ─── Stage 3: Production runner ─────────────────────────
 FROM node:22-alpine AS runner
