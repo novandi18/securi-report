@@ -9,8 +9,8 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-securi-report_secret}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-securi-report}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
       - "3306:3306"
     volumes:
@@ -18,7 +18,7 @@ services:
     networks:
       - securi-report-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-securi-report_secret}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -29,7 +29,7 @@ services:
     image: getmeili/meilisearch:v1.12
     restart: unless-stopped
     environment:
-      MEILI_MASTER_KEY: ${MEILISEARCH_ADMIN_KEY:-masterKey123}
+      MEILI_MASTER_KEY: ${MEILISEARCH_ADMIN_KEY}
       MEILI_ENV: production
     ports:
       - "7700:7700"
@@ -55,7 +55,7 @@ services:
     env_file:
       - .env.local
     environment:
-      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-securi-report_secret}@db:3306/${MYSQL_DATABASE:-securi-report}
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/${MYSQL_DATABASE}
       MEILISEARCH_HOST: http://meilisearch:7700
       NEXT_PUBLIC_MEILISEARCH_HOST: http://localhost:7700
     depends_on:
