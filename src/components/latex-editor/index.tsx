@@ -4,6 +4,8 @@ import { useCallback, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { LatexPreview } from "./preview";
 import Toolbar from "./toolbar";
+import { AISparkleButton } from "./ai-sparkle-button";
+import { AIShimmerBar } from "@/components/ui/ai-skeleton";
 import type { EditorState } from "@/lib/latex-helpers";
 import { wrapInlineCommand } from "@/lib/latex-helpers";
 
@@ -184,48 +186,53 @@ export function LatexEditor({
 
   return (
     <div>
-      {/* Label + tab toggle row */}
-      <div className="mb-2 flex items-center justify-between">
-        <label className="text-body-sm font-medium text-dark dark:text-white">
-          {label}
-        </label>
-        <div className="flex gap-1 rounded-md border border-stroke p-0.5 dark:border-dark-3">
-          <button
-            type="button"
-            onClick={() => setTab("editor")}
-            className={cn(
-              "rounded px-3 py-1 text-xs font-medium transition-colors",
-              tab === "editor"
-                ? "bg-primary text-white"
-                : "text-dark-5 hover:text-dark dark:text-dark-6 dark:hover:text-white",
-            )}
-          >
-            Editor
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("split")}
-            className={cn(
-              "rounded px-3 py-1 text-xs font-medium transition-colors",
-              tab === "split"
-                ? "bg-primary text-white"
-                : "text-dark-5 hover:text-dark dark:text-dark-6 dark:hover:text-white",
-            )}
-          >
-            Split
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("preview")}
-            className={cn(
-              "rounded px-3 py-1 text-xs font-medium transition-colors",
-              tab === "preview"
-                ? "bg-primary text-white"
-                : "text-dark-5 hover:text-dark dark:text-dark-6 dark:hover:text-white",
-            )}
-          >
-            Preview
-          </button>
+      {/* Label + tab toggle + AI button row */}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        {label && (
+          <label className="text-body-sm font-medium text-dark dark:text-white">
+            {label}
+          </label>
+        )}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-md border border-stroke p-0.5 dark:border-dark-3">
+            <button
+              type="button"
+              onClick={() => setTab("editor")}
+              className={cn(
+                "rounded px-3 py-1 text-xs font-medium transition-colors",
+                tab === "editor"
+                  ? "bg-primary text-white"
+                  : "text-dark-5 hover:text-dark dark:text-dark-6 dark:hover:text-white",
+              )}
+            >
+              Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("split")}
+              className={cn(
+                "rounded px-3 py-1 text-xs font-medium transition-colors",
+                tab === "split"
+                  ? "bg-primary text-white"
+                  : "text-dark-5 hover:text-dark dark:text-dark-6 dark:hover:text-white",
+              )}
+            >
+              Split
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("preview")}
+              className={cn(
+                "rounded px-3 py-1 text-xs font-medium transition-colors",
+                tab === "preview"
+                  ? "bg-primary text-white"
+                  : "text-dark-5 hover:text-dark dark:text-dark-6 dark:hover:text-white",
+              )}
+            >
+              Preview
+            </button>
+          </div>
+          <AISparkleButton getState={getEditorState} applyState={applyEditorState} />
         </div>
       </div>
 
@@ -235,7 +242,7 @@ export function LatexEditor({
       {tab === "editor" && (
         <div
           ref={containerRef}
-          className="relative overflow-hidden rounded-lg border border-gray-300 dark:border-slate-700"
+          className="relative rounded-lg border border-gray-300 dark:border-slate-700"
         >
           <Toolbar getState={getEditorState} applyState={applyEditorState} />
           <textarea
@@ -268,7 +275,7 @@ export function LatexEditor({
 
       {tab === "split" && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="relative overflow-hidden rounded-lg border border-gray-300 dark:border-slate-700">
+          <div className="relative rounded-lg border border-gray-300 dark:border-slate-700">
             <Toolbar getState={getEditorState} applyState={applyEditorState} />
             <textarea
               ref={textareaRef}

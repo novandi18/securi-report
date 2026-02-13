@@ -52,10 +52,38 @@ export function SearchTrigger() {
     <>
       <div className="flex items-center gap-2">
         {/* Fake search input button */}
+        {/* Icon-only button on mobile */}
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full max-w-[300px] items-center gap-3 rounded-full border bg-gray-2 px-4 py-2 text-sm text-dark-5 outline-none transition-colors hover:border-primary/50 dark:border-dark-3 dark:bg-dark-2 dark:text-dark-6 dark:hover:border-dark-4"
+          className="flex items-center justify-center rounded-lg border border-stroke p-2 text-dark-5 transition-colors hover:bg-gray-2 hover:text-dark dark:border-dark-3 dark:text-dark-6 dark:hover:bg-dark-3 dark:hover:text-white sm:hidden"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="currentColor"
+          >
+            <g clipPath="url(#st-icon-m)">
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M8.625 2.0625C5.00063 2.0625 2.0625 5.00063 2.0625 8.625C2.0625 12.2494 5.00063 15.1875 8.625 15.1875C12.2494 15.1875 15.1875 12.2494 15.1875 8.625C15.1875 5.00063 12.2494 2.0625 8.625 2.0625ZM0.9375 8.625C0.9375 4.37931 4.37931 0.9375 8.625 0.9375C12.8707 0.9375 16.3125 4.37931 16.3125 8.625C16.3125 10.5454 15.6083 12.3013 14.4441 13.6487L16.8977 16.1023C17.1174 16.3219 17.1174 16.6781 16.8977 16.8977C16.6781 17.1174 16.3219 17.1174 16.1023 16.8977L13.6487 14.4441C12.3013 15.6083 10.5454 16.3125 8.625 16.3125C4.37931 16.3125 0.9375 12.8707 0.9375 8.625Z"
+              />
+            </g>
+            <defs>
+              <clipPath id="st-icon-m">
+                <rect width="18" height="18" fill="white" />
+              </clipPath>
+            </defs>
+          </svg>
+        </button>
+
+        {/* Full search bar on desktop */}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="hidden w-full max-w-[300px] items-center gap-3 rounded-full border bg-gray-2 px-4 py-2 text-sm text-dark-5 outline-none transition-colors hover:border-primary/50 dark:border-dark-3 dark:bg-dark-2 dark:text-dark-6 dark:hover:border-dark-4 sm:flex"
         >
           <svg
             width="16"
@@ -77,7 +105,7 @@ export function SearchTrigger() {
             </defs>
           </svg>
           <span className="flex-1 text-left">Search…</span>
-          <kbd className="hidden rounded border border-stroke px-1.5 py-0.5 text-[10px] font-medium dark:border-dark-3 sm:inline-block">
+          <kbd className="rounded border border-stroke px-1.5 py-0.5 text-[10px] font-medium dark:border-dark-3">
             ⌘K
           </kbd>
         </button>

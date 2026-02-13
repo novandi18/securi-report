@@ -478,3 +478,72 @@ input[type="search"]::-webkit-search-cancel-button {
 .custom-gradient-1 {
   background-image: linear-gradient(145deg, #eef 0%, #fff8fc 100%);
 }
+
+/* ─── AI Shimmer Effect ────────────────────────────── */
+
+.ai-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.08) 40%,
+    rgba(139, 92, 246, 0.15) 50%,
+    rgba(139, 92, 246, 0.08) 60%,
+    transparent 100%
+  );
+  animation: ai-shimmer 2.5s ease-in-out infinite;
+}
+
+:is(.dark) .ai-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.06) 40%,
+    rgba(139, 92, 246, 0.12) 50%,
+    rgba(139, 92, 246, 0.06) 60%,
+    transparent 100%
+  );
+}
+
+@keyframes ai-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ─── AI Gradient Button (moving gradient) ─────────── */
+
+.ai-gradient-btn {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6, #3b82f6, #7c3aed);
+  background-size: 300% 300%;
+  animation: ai-gradient-move 4s ease infinite;
+}
+
+.ai-gradient-btn:disabled {
+  animation: none;
+  background: linear-gradient(135deg, #7c3aed80, #3b82f680);
+  background-size: 100% 100%;
+}
+
+@keyframes ai-gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ─── Reduced Motion ───────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-shimmer,
+  .ai-gradient-btn {
+    animation: none !important;
+  }
+}

@@ -34,6 +34,7 @@ import {
   wrapSelection,
 } from "@/lib/latex-helpers";
 
+
 /* ───── Types ─────────────────────────────────────── */
 
 export interface ToolbarProps {
@@ -309,11 +310,11 @@ function TableButton({
         onClick={() => setOpen(!open)}
       />
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 rounded-md border border-gray-200 bg-white p-2 shadow-lg dark:border-slate-600 dark:bg-slate-800">
-          <p className="mb-1 text-[10px] text-gray-500 dark:text-slate-400">
+        <div className="absolute right-0 top-full z-50 mt-1 min-w-[10rem] rounded-md border border-gray-200 bg-white p-3 shadow-lg dark:border-slate-600 dark:bg-slate-800">
+          <p className="mb-1.5 text-[10px] font-medium text-gray-500 dark:text-slate-400">
             {hover[0] > 0 ? `${hover[0]} × ${hover[1]}` : "Select size"}
           </p>
-          <div className="grid grid-cols-5 gap-0.5">
+          <div className="grid grid-cols-5 gap-1">
             {Array.from({ length: 5 }, (_, r) =>
               Array.from({ length: 5 }, (_, c) => (
                 <button
@@ -325,7 +326,7 @@ function TableButton({
                     setOpen(false);
                   }}
                   className={cn(
-                    "h-4 w-4 rounded-sm border",
+                    "h-6 w-6 rounded-sm border transition-colors",
                     c < hover[0] && r < hover[1]
                       ? "border-blue-400 bg-blue-500/30"
                       : "border-gray-300 bg-gray-100 dark:border-slate-600 dark:bg-slate-700",

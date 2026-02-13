@@ -24,7 +24,7 @@ export function Header() {
       </button>
 
       {isMobile && (
-        <Link href={"/"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
+        <Link href={"/"} className="ml-1">
           <Image
             src={"/images/logo/logo-icon.svg"}
             width={32}
@@ -40,7 +40,7 @@ export function Header() {
       </div>
 
       <div className="flex flex-1 items-center justify-end gap-2 min-[375px]:gap-4">
-        <div className="hidden w-full max-w-[340px] sm:block">
+        <div className="w-full max-w-[340px] sm:block">
           <SearchTrigger />
         </div>
 
