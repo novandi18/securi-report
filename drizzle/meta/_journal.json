@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1770905085706,
+      "tag": "0000_volatile_quicksilver",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1770907327659,
+      "tag": "0001_low_loners",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1770991891741,
+      "tag": "0002_special_black_cat",
+      "breakpoints": true
+    }
+  ]
+}

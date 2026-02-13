@@ -1,0 +1,16 @@
+node_modules/
+.next/
+.git/
+.github/
+.env
+.env.*
+!.env.example
+docker-data/
+*.md
+!README.md
+LICENSE
+.vscode/
+.idea/
+.DS_Store
+public/uploads/*
+public/deliverables/*

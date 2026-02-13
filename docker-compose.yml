@@ -1,0 +1,85 @@
+# ──────────────────────────────────────────────────────────
+#  Securi Report — Docker Compose (Production)
+#  Services: app, db (MySQL 8), meilisearch
+# ──────────────────────────────────────────────────────────
+
+services:
+  # ─── MySQL 8 ─────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-securi-report_secret}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-securi-report}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - securi-report-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-securi-report_secret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ─── Meilisearch ─────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_ADMIN_KEY:-masterKey123}
+      MEILI_ENV: production
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    networks:
+      - securi-report-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ─── Next.js Application ─────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-securi-report_secret}@db:3306/${MYSQL_DATABASE:-securi-report}
+      MEILISEARCH_HOST: http://meilisearch:7700
+      NEXT_PUBLIC_MEILISEARCH_HOST: http://localhost:7700
+    depends_on:
+      db:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    networks:
+      - securi-report-net
+    volumes:
+      # Persist user uploads & generated deliverables across restarts
+      - uploads_data:/app/public/uploads
+      - deliverables_data:/app/public/deliverables
+
+volumes:
+  mysql_data:
+    driver: local
+  meilisearch_data:
+    driver: local
+  uploads_data:
+    driver: local
+  deliverables_data:
+    driver: local
+
+networks:
+  securi-report-net:
+    driver: bridge
