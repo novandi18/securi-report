@@ -321,6 +321,15 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
 // ── Keep old export alias for backward compatibility during migration ──
 export const adminNotifications = notifications;
 
+// ─── Custom Report Template (single-row, stores PDF-extracted text) ───
+export const customReportTemplates = mysqlTable("custom_report_templates", {
+  id: int("id").primaryKey().default(1),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  extractedText: longtext("extracted_text").notNull(),
+  fileSizeKb: int("file_size_kb"),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
 // ─── Type Exports ─────────────────────────────────────────
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -346,3 +355,5 @@ export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type ReportAttachment = typeof reportAttachments.$inferSelect;
 export type NewReportAttachment = typeof reportAttachments.$inferInsert;
+export type CustomReportTemplate = typeof customReportTemplates.$inferSelect;
+export type NewCustomReportTemplate = typeof customReportTemplates.$inferInsert;

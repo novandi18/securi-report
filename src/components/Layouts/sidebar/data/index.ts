@@ -121,6 +121,11 @@ export const NAV_DATA: NavSection[] = [
         items: [
           { title: "Account", url: "/settings/account" },
           { title: "Application", url: "/settings/app", adminOnly: true },
+          {
+            title: "Custom Template",
+            url: "/settings/custom-template",
+            adminOnly: true,
+          },
         ],
       },
     ],

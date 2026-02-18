@@ -3,6 +3,13 @@ const nextConfig = {
   // Enable standalone output for Docker deployments
   output: "standalone",
 
+  // Raise Server Actions body limit for PDF uploads (default 1 MB)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
+
   // ─── Security Headers ───────────────────────────────────
   async headers() {
     return [

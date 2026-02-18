@@ -58,6 +58,9 @@ export type AuditAction =
   | "owasp.delete"
   // Settings
   | "app_settings.update"
+  // Custom Template
+  | "custom_template.upload"
+  | "custom_template.delete"
   // Upload
   | "upload.image"
   // Search

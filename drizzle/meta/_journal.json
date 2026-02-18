@@ -22,6 +22,13 @@
       "when": 1770991891741,
       "tag": "0002_special_black_cat",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1771427472391,
+      "tag": "0003_aromatic_sleepwalker",
+      "breakpoints": true
     }
   ]
 }

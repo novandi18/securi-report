@@ -65,7 +65,7 @@ export const authConfig: NextAuthConfig = {
       }
 
       // Admin-only routes
-      const adminOnlyRoutes = ["/users", "/register", "/settings/app", "/reports/merge"];
+      const adminOnlyRoutes = ["/users", "/register", "/settings/app", "/settings/custom-template", "/reports/merge"];
       const isAdminRoute = adminOnlyRoutes.some((route) =>
         pathname.startsWith(route),
       );
