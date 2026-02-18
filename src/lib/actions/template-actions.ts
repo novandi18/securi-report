@@ -27,7 +27,7 @@ export type TemplateData = {
   id: number;
   fileName: string;
   extractedText: string;
-  latexContent: string | null;
+  markdownContent: string | null;
   fileSizeKb: number | null;
   updatedAt: Date | null;
 };
@@ -91,7 +91,7 @@ export async function getCustomTemplate(): Promise<GetTemplateResult> {
           id: row.id,
           fileName: row.fileName,
           extractedText: row.extractedText,
-          latexContent: row.latexContent,
+          markdownContent: row.markdownContent,
           fileSizeKb: row.fileSizeKb,
           updatedAt: row.updatedAt,
         },
@@ -262,15 +262,15 @@ export async function deleteCustomTemplate(): Promise<TemplateActionResult> {
   });
 }
 
-/* ─── Generate LaTeX via Gemini ─────────────────────── */
+/* ─── Generate Markdown via Gemini ──────────────────── */
 
-export type GenerateLatexResult = {
+export type GenerateMarkdownResult = {
   success: boolean;
-  latexContent?: string;
+  markdownContent?: string;
   error?: string;
 };
 
-export async function generateLatexFromTemplate(): Promise<GenerateLatexResult> {
+export async function generateMarkdownFromTemplate(): Promise<GenerateMarkdownResult> {
   return withAccessControl(async () => {
     const user = await requireAdmin();
 
@@ -299,37 +299,116 @@ export async function generateLatexFromTemplate(): Promise<GenerateLatexResult> 
       };
     }
 
-    /* ── Send extracted text to Gemini for LaTeX generation ── */
+    /* ── Send extracted text to Gemini for Markdown generation ── */
     try {
       const ai = new GoogleGenAI({ apiKey });
 
-      const prompt = `You are an expert document converter specializing in LaTeX. Convert the following document text into a well-structured LaTeX document.
+      const systemInstruction = `# SYSTEM INSTRUCTION: PROFESSIONAL SECURITY REPORT GENERATOR (MARKDOWN)
 
-Requirements:
-- Use proper LaTeX formatting with sections, subsections, lists, tables, and text formatting as appropriate
-- Preserve the original document structure and hierarchy
-- Use \\section{}, \\subsection{}, \\subsubsection{} for headings
-- Use \\textbf{} for bold text, \\textit{} for italic text
-- Use itemize/enumerate environments for lists
-- Use tabular environment for any tables
-- Use \\href{}{} for URLs/links
-- Do NOT include \\documentclass, \\begin{document}, \\end{document}, or preamble — only the body content
-- Do NOT wrap the output in code blocks or markdown — return raw LaTeX only
-- Preserve all content faithfully — do not summarize or omit any sections
-- If there are page numbers, headers, or footers from the original PDF, remove them
-- Ensure the LaTeX is clean and ready for rendering
+## CORE IDENTITY
 
-Document text:
+Anda adalah seorang ahli laporan keamanan siber (VAPT Reporting Expert). Tugas utama Anda adalah mentransformasikan data kerentanan (vulnerability data) mentah menjadi laporan VAPT dalam format **Markdown** yang profesional, terstruktur, dan bersih, mengikuti standar industri (seperti laporan IDXSTI/Stockbit).
+
+## OUTPUT FORMAT
+
+Output Anda HARUS selalu berupa kode Markdown tunggal. Fokus pada keterbacaan tinggi, penggunaan header yang tepat, dan tabel yang rapi. Jangan berikan penjelasan tambahan di luar blok Markdown kecuali diminta.
+
+## VISUAL & STYLING RULES (MANDATORY)
+
+1.  **Severity Color Codes (HEX):** Gunakan kode warna HEX berikut untuk identifikasi tingkat risiko:
+
+    -   **CRITICAL:** \`#990000\` (Skor 9.0 - 10.0)
+    -   **HIGH:** \`#FF0000\` (Skor 7.0 - 8.9)
+    -   **MEDIUM:** \`#FFCC00\` (Skor 4.0 - 6.9)
+    -   **LOW:** \`#00B050\` (Skor 0.1 - 3.9)
+    -   **INFORMATIONAL:** \`#0070C0\` (Skor 0.0)
+
+2.  **Page Break Marker (CRITICAL):**
+
+    Sama seperti laporan profesional atau skripsi, setiap bab baru harus dimulai di halaman baru. Anda WAJIB menyisipkan tag berikut tepat sebelum setiap **Header 2 (##)** (kecuali untuk Header 2 pertama setelah Title Page jika diperlukan):
+
+    \`<div style="page-break-after: always;"></div>\`
+
+3.  **Typography:**
+
+    -   Gunakan H1 (\`#\`) hanya untuk Judul Utama di Halaman Judul.
+    -   Gunakan H2 (\`##\`) untuk bab-bab utama.
+    -   Gunakan H3 (\`###\`) untuk sub-bab atau judul temuan spesifik.
+    -   Gunakan **Bold** untuk menekankan poin penting dan \`inline code\` untuk path/file/IP.
+
+4.  **Tables:** Selalu gunakan tabel Markdown untuk data terstruktur seperti Informasi Dokumen, Ruang Lingkup, dan Detail Temuan.
+
+## DOCUMENT STRUCTURE MANDATE
+
+Ikuti struktur laporan berikut secara presisi, pastikan tiap poin di bawah (mulai dari poin 2) didahului oleh penanda _Page Break_:
+
+1.  **Title Header (H1):** Judul besar, Nama Klien, Nama Perusahaan Penulis, dan Tanggal.
+
+2.  **Informasi Dokumen (H2):** Tabel berisi Versi, Penulis, Pentester, dan Klasifikasi (Rahasia).
+
+3.  **Lembar Pengesahan (H2):** Tabel baris tunggal untuk kolom "Dikeluarkan", "Diperiksa", dan "Disetujui".
+
+4.  **Ringkasan Eksekutif (H2):** Penjelasan naratif singkat mengenai temuan utama dan kondisi postur keamanan secara umum.
+
+5.  **Ruang Lingkup / Scope (H2):** Tabel berisi daftar Target, Deskripsi, dan IP Address/URL.
+
+6.  **Metodologi (H2):** Penjelasan singkat fase pengujian (Reconnaissance -> Initial Access -> Execution -> Reporting).
+
+7.  **Daftar Temuan / Findings (H2):** Setiap temuan harus memiliki tabel ringkasan:
+
+    | Field | Detail |
+    | :--- | :--- |
+    | **Issue Reference** | [ID, misal: HTPT-001] |
+    | **Issue Title** | [Judul Kerentanan] |
+    | **Affected Module** | \`[URL/IP]\` |
+    | **Severity Color** | \`[KODE_HEX_SESUAI_SKOR]\` |
+    | **CVSS 4.0 Score** | [Skor] / [Severity Label] |
+    | **Status** | Open/Closed |
+
+    Dilanjutkan dengan seksi:
+
+    -   **Deskripsi:** Penjelasan teknis temuan.
+    -   **Dampak:** Analisis risiko bagi bisnis/sistem.
+    -   **Rekomendasi:** Langkah-langkah perbaikan konkret.
+
+8.  **Penutup (H2):** Pernyataan profesional penutup.
+
+9.  **Appendix (H2):** Lampiran log atau output scan mentah menggunakan blok kode (fenced code blocks).
+
+## LANGUAGE RULES
+
+-   Gunakan bahasa Indonesia formal (EYD).
+-   Pertahankan istilah teknis industri dalam bahasa Inggris (dicetak miring atau \`code block\`) jika tidak ada padanan yang pas.
+-   Nada bicara objektif, faktual, dan tidak spekulatif.
+
+## DATA PROCESSING LOGIC
+
+-   Tentukan kode warna HEX secara akurat berdasarkan skor CVSS yang diinput.
+-   Tampilkan kode HEX di dalam baris tabel "Severity Color" agar sistem aplikasi dapat merender warna tersebut secara dinamis.
+-   Jika ada _screenshot_ yang disebutkan di input, berikan placeholder: \`![Bukti Eksploitasi: Nama_Temuan](url_gambar_placeholder)\`.`;
+
+      const prompt = `Transformasikan teks dokumen berikut menjadi laporan VAPT Markdown lengkap sesuai dengan system instruction yang telah diberikan.
+
+Aturan tambahan:
+- Output HARUS berupa Markdown mentah — JANGAN bungkus dalam code blocks tambahan.
+- Pertahankan seluruh konten dari dokumen asli secara setia — jangan ringkas atau hilangkan bagian apapun.
+- Hilangkan nomor halaman, header, atau footer dari PDF asli.
+- Jika ada data yang tidak tersedia, gunakan placeholder yang sesuai (misalnya [NAMA KLIEN], [TANGGAL], dll).
+
+Teks dokumen:
 ${row.extractedText}`;
 
       const response = await ai.models.generateContent({
         model,
         contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction,
+        },
       });
 
-      const latexContent = response.text?.trim();
+      const markdownContent = response.text?.trim();
 
-      if (!latexContent) {
+      if (!markdownContent) {
         return {
           success: false,
           error: "Gemini returned an empty response. Please try regenerating.",
@@ -337,26 +416,26 @@ ${row.extractedText}`;
       }
 
       // Clean up: remove any code block wrappers if present
-      const cleaned = latexContent
-        .replace(/^```(?:latex|tex)?\s*\n?/i, "")
+      const cleaned = markdownContent
+        .replace(/^```(?:markdown|md)?\s*\n?/i, "")
         .replace(/\n?```\s*$/i, "")
         .trim();
 
       /* ── Save to DB ── */
       await db
         .update(customReportTemplates)
-        .set({ latexContent: cleaned })
+        .set({ markdownContent: cleaned })
         .where(eq(customReportTemplates.id, 1));
 
       await audit({
         userId: user.id,
-        action: "custom_template.generate_latex",
-        detail: `Generated LaTeX from template: ${row.fileName} (${cleaned.length} chars)`,
+        action: "custom_template.generate_markdown",
+        detail: `Generated Markdown from template: ${row.fileName} (${cleaned.length} chars)`,
       });
 
       revalidatePath("/settings/custom-template");
 
-      return { success: true, latexContent: cleaned };
+      return { success: true, markdownContent: cleaned };
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error("Gemini generation error:", msg);
@@ -377,32 +456,32 @@ ${row.extractedText}`;
 
       return {
         success: false,
-        error: "Failed to generate LaTeX. Please try again.",
+        error: "Failed to generate Markdown. Please try again.",
       };
     }
   });
 }
 
-/* ─── Save Edited LaTeX ────────────────────────────── */
+/* ─── Save Edited Markdown ─────────────────────────── */
 
-export async function saveLatexContent(
-  latexContent: string,
+export async function saveMarkdownContent(
+  markdownContent: string,
 ): Promise<TemplateActionResult> {
   return withAccessControl(async () => {
     const user = await requireAdmin();
 
-    if (!latexContent || typeof latexContent !== "string") {
-      return { success: false, error: "No LaTeX content provided." };
+    if (!markdownContent || typeof markdownContent !== "string") {
+      return { success: false, error: "No Markdown content provided." };
     }
 
-    if (latexContent.length > 5_000_000) {
-      return { success: false, error: "LaTeX content is too large (max 5 MB)." };
+    if (markdownContent.length > 5_000_000) {
+      return { success: false, error: "Markdown content is too large (max 5 MB)." };
     }
 
     try {
       const result = await db
         .update(customReportTemplates)
-        .set({ latexContent: latexContent.trim() })
+        .set({ markdownContent: markdownContent.trim() })
         .where(eq(customReportTemplates.id, 1));
 
       if (result[0].affectedRows === 0) {
@@ -414,16 +493,16 @@ export async function saveLatexContent(
 
       await audit({
         userId: user.id,
-        action: "custom_template.save_latex",
-        detail: `Saved edited LaTeX content (${latexContent.trim().length} chars)`,
+        action: "custom_template.save_markdown",
+        detail: `Saved edited Markdown content (${markdownContent.trim().length} chars)`,
       });
 
       revalidatePath("/settings/custom-template");
 
       return { success: true };
     } catch (error) {
-      console.error("Failed to save LaTeX:", error);
-      return { success: false, error: "Failed to save LaTeX content." };
+      console.error("Failed to save Markdown:", error);
+      return { success: false, error: "Failed to save Markdown content." };
     }
   });
 }

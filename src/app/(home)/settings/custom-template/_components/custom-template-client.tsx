@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import {
   Upload,
   FileText,
@@ -24,11 +24,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   uploadCustomTemplate,
   deleteCustomTemplate,
-  generateLatexFromTemplate,
-  saveLatexContent,
+  generateMarkdownFromTemplate,
+  saveMarkdownContent,
 } from "@/lib/actions/template-actions";
 import type { TemplateData } from "@/lib/actions/template-actions";
-import { LatexPreview } from "@/components/latex-editor/preview";
+import { marked } from "marked";
 
 /* ─── Props ─────────────────────────────────────────── */
 
@@ -54,16 +54,26 @@ export default function CustomTemplateClient({
   const [deleting, setDeleting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  /* LaTeX state */
+  /* Markdown state */
   const [generating, setGenerating] = useState(false);
-  const [savingLatex, setSavingLatex] = useState(false);
-  const [latexContent, setLatexContent] = useState<string>(
-    initialTemplate?.latexContent ?? "",
+  const [savingMarkdown, setSavingMarkdown] = useState(false);
+  const [markdownContent, setMarkdownContent] = useState<string>(
+    initialTemplate?.markdownContent ?? "",
   );
-  const [latexDirty, setLatexDirty] = useState(false);
-  const [latexTab, setLatexTab] = useState<"editor" | "preview" | "split">(
+  const [markdownDirty, setMarkdownDirty] = useState(false);
+  const [mdTab, setMdTab] = useState<"editor" | "preview" | "split">(
     "split",
   );
+
+  /* Markdown → HTML preview (memoized) */
+  const renderedHtml = useMemo(() => {
+    if (!markdownContent.trim()) return "";
+    try {
+      return marked.parse(markdownContent) as string;
+    } catch {
+      return "<p class='text-red-500'>Error rendering Markdown</p>";
+    }
+  }, [markdownContent]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -104,7 +114,7 @@ export default function CustomTemplateClient({
           id: 1,
           fileName: file.name,
           extractedText: "Reloading…",
-          latexContent: null,
+          markdownContent: null,
           fileSizeKb: Math.round(file.size / 1024),
           updatedAt: new Date(),
         });
@@ -135,8 +145,8 @@ export default function CustomTemplateClient({
       addToast("Template deleted successfully.", "success");
       setTemplate(null);
       setShowPreview(false);
-      setLatexContent("");
-      setLatexDirty(false);
+      setMarkdownContent("");
+      setMarkdownDirty(false);
     } catch {
       addToast("An unexpected error occurred while deleting.", "error");
     } finally {
@@ -145,24 +155,24 @@ export default function CustomTemplateClient({
     }
   }, [addToast]);
 
-  /* ── Generate LaTeX handler ── */
-  const handleGenerateLatex = useCallback(async () => {
+  /* ── Generate Markdown handler ── */
+  const handleGenerateMarkdown = useCallback(async () => {
     setGenerating(true);
     try {
-      const result = await generateLatexFromTemplate();
+      const result = await generateMarkdownFromTemplate();
 
       if (!result.success) {
-        addToast(result.error || "LaTeX generation failed.", "error");
+        addToast(result.error || "Markdown generation failed.", "error");
         return;
       }
 
-      if (result.latexContent) {
-        setLatexContent(result.latexContent);
-        setLatexDirty(false);
+      if (result.markdownContent) {
+        setMarkdownContent(result.markdownContent);
+        setMarkdownDirty(false);
         setTemplate((prev) =>
-          prev ? { ...prev, latexContent: result.latexContent! } : prev,
+          prev ? { ...prev, markdownContent: result.markdownContent! } : prev,
         );
-        addToast("LaTeX generated successfully from PDF template.", "success");
+        addToast("Markdown generated successfully from PDF template.", "success");
       }
     } catch {
       addToast("An unexpected error occurred during generation.", "error");
@@ -171,33 +181,33 @@ export default function CustomTemplateClient({
     }
   }, [addToast]);
 
-  /* ── Save LaTeX handler ── */
-  const handleSaveLatex = useCallback(async () => {
-    if (!latexContent.trim()) {
-      addToast("LaTeX content is empty.", "error");
+  /* ── Save Markdown handler ── */
+  const handleSaveMarkdown = useCallback(async () => {
+    if (!markdownContent.trim()) {
+      addToast("Markdown content is empty.", "error");
       return;
     }
 
-    setSavingLatex(true);
+    setSavingMarkdown(true);
     try {
-      const result = await saveLatexContent(latexContent);
+      const result = await saveMarkdownContent(markdownContent);
 
       if (!result.success) {
-        addToast(result.error || "Failed to save LaTeX.", "error");
+        addToast(result.error || "Failed to save Markdown.", "error");
         return;
       }
 
-      setLatexDirty(false);
+      setMarkdownDirty(false);
       setTemplate((prev) =>
-        prev ? { ...prev, latexContent } : prev,
+        prev ? { ...prev, markdownContent } : prev,
       );
-      addToast("LaTeX content saved successfully.", "success");
+      addToast("Markdown content saved successfully.", "success");
     } catch {
       addToast("An unexpected error occurred while saving.", "error");
     } finally {
-      setSavingLatex(false);
+      setSavingMarkdown(false);
     }
-  }, [addToast, latexContent]);
+  }, [addToast, markdownContent]);
 
   /* ── Drag & Drop ── */
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -360,24 +370,24 @@ export default function CustomTemplateClient({
         </div>
       )}
 
-      {/* ─── LaTeX Generation Section ─── */}
+      {/* ─── Markdown Generation Section ─── */}
       {template && (
         <div className="rounded-xl border border-stroke bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
           <div className="mb-4 flex items-center justify-between">
             <h4 className="flex items-center gap-2 text-sm font-semibold text-dark dark:text-white">
               <Code size={16} className="text-primary" />
-              LaTeX Template
+              Markdown Template
             </h4>
             <div className="flex items-center gap-2">
               {/* Save Button */}
-              {latexContent && latexDirty && (
+              {markdownContent && markdownDirty && (
                 <button
                   type="button"
-                  onClick={handleSaveLatex}
-                  disabled={savingLatex}
+                  onClick={handleSaveMarkdown}
+                  disabled={savingMarkdown}
                   className="flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-50 dark:border-green-900/40 dark:text-green-400 dark:hover:bg-green-950/30"
                 >
-                  {savingLatex ? (
+                  {savingMarkdown ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : (
                     <Save size={14} />
@@ -386,10 +396,10 @@ export default function CustomTemplateClient({
                 </button>
               )}
 
-              {/* View LaTeX as PDF Button */}
-              {latexContent && !latexDirty && (
+              {/* View Markdown as PDF Button */}
+              {markdownContent && !markdownDirty && (
                 <a
-                  href="/api/template-latex-pdf"
+                  href="/api/template-markdown-pdf"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/5 dark:border-primary/40 dark:hover:bg-primary/10"
@@ -400,10 +410,10 @@ export default function CustomTemplateClient({
               )}
 
               {/* Regenerate Button */}
-              {latexContent && (
+              {markdownContent && (
                 <button
                   type="button"
-                  onClick={handleGenerateLatex}
+                  onClick={handleGenerateMarkdown}
                   disabled={generating}
                   className="flex items-center gap-1.5 rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50 disabled:opacity-50 dark:border-amber-900/40 dark:text-amber-400 dark:hover:bg-amber-950/30"
                 >
@@ -418,26 +428,26 @@ export default function CustomTemplateClient({
             </div>
           </div>
 
-          {/* No LaTeX yet — Generate button */}
-          {!latexContent && !generating && (
+          {/* No Markdown yet — Generate button */}
+          {!markdownContent && !generating && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-stroke px-6 py-12 text-center dark:border-dark-3">
               <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
                 <Sparkles size={24} className="text-primary" />
               </div>
               <p className="text-sm font-medium text-dark dark:text-white">
-                Generate LaTeX from your PDF template
+                Generate Markdown from your PDF template
               </p>
               <p className="mt-1 mb-4 text-xs text-dark-5 dark:text-dark-6">
                 Gunakan Gemini AI untuk mengkonversi teks dari PDF menjadi
-                dokumen LaTeX terstruktur
+                dokumen Markdown terstruktur
               </p>
               <button
                 type="button"
-                onClick={handleGenerateLatex}
+                onClick={handleGenerateMarkdown}
                 className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
               >
                 <Sparkles size={16} />
-                Generate LaTeX
+                Generate Markdown
               </button>
             </div>
           )}
@@ -450,7 +460,7 @@ export default function CustomTemplateClient({
                 className="mb-3 animate-spin text-primary"
               />
               <p className="text-sm font-medium text-dark dark:text-white">
-                Generating LaTeX with Gemini AI…
+                Generating Markdown with Gemini AI…
               </p>
               <p className="mt-1 text-xs text-dark-5 dark:text-dark-6">
                 This may take a moment depending on the document length.
@@ -458,8 +468,8 @@ export default function CustomTemplateClient({
             </div>
           )}
 
-          {/* LaTeX Editor + Preview */}
-          {latexContent && !generating && (
+          {/* Markdown Editor + Preview */}
+          {markdownContent && !generating && (
             <div>
               {/* Tab Switcher */}
               <div className="mb-3 flex items-center gap-1 rounded-lg border border-stroke bg-gray-1 p-1 dark:border-dark-3 dark:bg-dark-3/30">
@@ -473,10 +483,10 @@ export default function CustomTemplateClient({
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setLatexTab(key)}
+                    onClick={() => setMdTab(key)}
                     className={cn(
                       "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                      latexTab === key
+                      mdTab === key
                         ? "bg-white text-primary shadow-sm dark:bg-dark-2"
                         : "text-dark-5 hover:text-dark dark:text-dark-6 dark:hover:text-white",
                     )}
@@ -491,22 +501,22 @@ export default function CustomTemplateClient({
               <div
                 className={cn(
                   "gap-4",
-                  latexTab === "split"
+                  mdTab === "split"
                     ? "grid grid-cols-1 lg:grid-cols-2"
                     : "block",
                 )}
               >
                 {/* Editor Panel */}
-                {(latexTab === "editor" || latexTab === "split") && (
+                {(mdTab === "editor" || mdTab === "split") && (
                   <div>
                     <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-dark-5 dark:text-dark-6">
-                      LaTeX Editor
+                      Markdown Editor
                     </label>
                     <textarea
-                      value={latexContent}
+                      value={markdownContent}
                       onChange={(e) => {
-                        setLatexContent(e.target.value);
-                        setLatexDirty(true);
+                        setMarkdownContent(e.target.value);
+                        setMarkdownDirty(true);
                       }}
                       className="h-[500px] w-full resize-y rounded-lg border border-stroke bg-gray-1 p-4 font-mono text-xs leading-relaxed text-dark outline-none transition-colors focus:border-primary dark:border-dark-3 dark:bg-dark-3/20 dark:text-white dark:focus:border-primary"
                       spellCheck={false}
@@ -515,16 +525,13 @@ export default function CustomTemplateClient({
                 )}
 
                 {/* Preview Panel */}
-                {(latexTab === "preview" || latexTab === "split") && (
+                {(mdTab === "preview" || mdTab === "split") && (
                   <div>
                     <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-dark-5 dark:text-dark-6">
-                      LaTeX Preview
+                      Markdown Preview
                     </label>
-                    <div className="h-[500px] overflow-auto">
-                      <LatexPreview
-                        content={latexContent}
-                        height="100%"
-                      />
+                    <div className="prose prose-sm dark:prose-invert h-[500px] max-w-none overflow-auto rounded-lg border border-stroke bg-white p-4 dark:border-dark-3 dark:bg-dark-3/20">
+                      <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
                     </div>
                   </div>
                 )}
@@ -533,7 +540,7 @@ export default function CustomTemplateClient({
               {/* Dirty indicator & actions */}
               <div className="mt-3 flex items-center justify-between">
                 <p className="text-xs text-dark-5 dark:text-dark-6">
-                  {latexDirty ? (
+                  {markdownDirty ? (
                     <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
                       <AlertTriangle size={12} />
                       Unsaved changes
@@ -545,19 +552,19 @@ export default function CustomTemplateClient({
                     </span>
                   )}
                 </p>
-                {latexDirty && (
+                {markdownDirty && (
                   <button
                     type="button"
-                    onClick={handleSaveLatex}
-                    disabled={savingLatex}
+                    onClick={handleSaveMarkdown}
+                    disabled={savingMarkdown}
                     className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
                   >
-                    {savingLatex ? (
+                    {savingMarkdown ? (
                       <Loader2 size={14} className="animate-spin" />
                     ) : (
                       <Save size={14} />
                     )}
-                    Save LaTeX
+                    Save Markdown
                   </button>
                 )}
               </div>
@@ -571,7 +578,7 @@ export default function CustomTemplateClient({
               className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400"
             />
             <p className="text-xs text-blue-700 dark:text-blue-300">
-              LaTeX dihasilkan oleh Gemini AI berdasarkan teks yang diekstrak
+              Markdown dihasilkan oleh Gemini AI berdasarkan teks yang diekstrak
               dari PDF. Anda dapat mengedit hasilnya secara manual atau
               melakukan regenerate jika hasilnya kurang sesuai. Perubahan manual
               harus disimpan sebelum meninggalkan halaman.

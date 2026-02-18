@@ -326,7 +326,7 @@ export const customReportTemplates = mysqlTable("custom_report_templates", {
   id: int("id").primaryKey().default(1),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   extractedText: longtext("extracted_text").notNull(),
-  latexContent: longtext("latex_content"),
+  markdownContent: longtext("markdown_content"),
   fileSizeKb: int("file_size_kb"),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });

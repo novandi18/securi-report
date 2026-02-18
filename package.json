@@ -34,6 +34,7 @@
     "jsvectormap": "^1.6.0",
     "katex": "^0.16.28",
     "lucide-react": "^0.563.0",
+    "marked": "^17.0.3",
     "meilisearch": "^0.55.0",
     "mysql2": "^3.16.3",
     "next": "16.0.10",

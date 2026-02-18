@@ -61,8 +61,8 @@ export type AuditAction =
   // Custom Template
   | "custom_template.upload"
   | "custom_template.delete"
-  | "custom_template.generate_latex"
-  | "custom_template.save_latex"
+  | "custom_template.generate_markdown"
+  | "custom_template.save_markdown"
   // Upload
   | "upload.image"
   // Search

@@ -3,15 +3,13 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { customReportTemplates } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { latexToHtml } from "@/lib/latex-to-html";
+import { marked } from "marked";
 import puppeteer from "puppeteer";
-import fs from "fs/promises";
-import path from "path";
 
 /**
- * GET /api/template-latex-pdf
+ * GET /api/template-markdown-pdf
  *
- * Generates a PDF from the stored LaTeX content and returns it inline
+ * Generates a PDF from the stored Markdown content and returns it inline
  * so the browser opens it in a new tab.
  */
 export async function GET() {
@@ -26,39 +24,23 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  /* ── Fetch LaTeX content from DB ── */
+  /* ── Fetch Markdown content from DB ── */
   const [row] = await db
     .select()
     .from(customReportTemplates)
     .where(eq(customReportTemplates.id, 1))
     .limit(1);
 
-  if (!row?.latexContent) {
+  if (!row?.markdownContent) {
     return NextResponse.json(
-      { error: "No LaTeX content available. Generate LaTeX first." },
+      { error: "No Markdown content available. Generate Markdown first." },
       { status: 404 },
     );
   }
 
-  /* ── Convert LaTeX → HTML ── */
-  const bodyHtml = latexToHtml(row.latexContent);
-
-  // Read KaTeX CSS for math rendering
-  let katexCss = "";
-  try {
-    const katexCssPath = path.join(
-      process.cwd(),
-      "node_modules",
-      "katex",
-      "dist",
-      "katex.min.css",
-    );
-    katexCss = await fs.readFile(katexCssPath, "utf-8");
-  } catch {
-    // KaTeX CSS not available — math may not render properly
-  }
-
-  const html = buildLatexPdfHtml(bodyHtml, katexCss, row.fileName);
+  /* ── Convert Markdown → HTML ── */
+  const bodyHtml = await marked.parse(row.markdownContent);
+  const html = buildMarkdownPdfHtml(bodyHtml, row.fileName);
 
   /* ── Generate PDF via Puppeteer ── */
   const browser = await puppeteer.launch({
@@ -77,11 +59,11 @@ export async function GET() {
       headerTemplate: `
         <div style="width:100%;font-size:8px;color:#999;padding:0 15mm;display:flex;justify-content:space-between">
           <span>Custom Report Template</span>
-          <span>${row.fileName}</span>
+          <span>${escapeForHtml(row.fileName)}</span>
         </div>`,
       footerTemplate: `
         <div style="width:100%;font-size:8px;color:#999;padding:0 15mm;display:flex;justify-content:space-between">
-          <span>Generated from LaTeX</span>
+          <span>Generated from Markdown</span>
           <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
         </div>`,
     });
@@ -90,7 +72,7 @@ export async function GET() {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="template-latex.pdf"`,
+        "Content-Disposition": `inline; filename="template-report.pdf"`,
         "Cache-Control": "no-store",
       },
     });
@@ -101,16 +83,11 @@ export async function GET() {
 
 /* ─── HTML builder ──────────────────────────────────── */
 
-function buildLatexPdfHtml(
-  bodyHtml: string,
-  katexCss: string,
-  fileName: string,
-): string {
+function buildMarkdownPdfHtml(bodyHtml: string, fileName: string): string {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <style>${katexCss}</style>
   <style>
     @page { margin: 20mm 15mm; }
 
@@ -204,11 +181,16 @@ function buildLatexPdfHtml(
     }
 
     a { color: #5750F1; text-decoration: underline; }
+
+    img { max-width: 100%; height: auto; margin: 8px 0; border-radius: 4px; }
+
+    strong { font-weight: 700; }
+    em { font-style: italic; }
   </style>
 </head>
 <body>
   <div class="doc-title">Custom Report Template</div>
-  <div class="doc-subtitle">LaTeX Preview — ${escapeForHtml(fileName)}</div>
+  <div class="doc-subtitle">Markdown Preview — ${escapeForHtml(fileName)}</div>
   ${bodyHtml}
 </body>
 </html>`;
