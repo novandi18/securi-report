@@ -6,9 +6,15 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, withAccessControl, audit } from "@/lib/security";
 import { GoogleGenAI } from "@google/genai";
+import fs from "fs/promises";
+import path from "path";
 // Import the lib file directly to avoid pdf-parse's index.js which loads a test PDF at import time
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require("pdf-parse/lib/pdf-parse");
+
+/** Directory where uploaded template PDFs are saved */
+const TEMPLATE_PDF_DIR = path.join(process.cwd(), "public", "uploads", "templates");
+const TEMPLATE_PDF_NAME = "template.pdf";
 
 /* ─── Types ─────────────────────────────────────────── */
 
@@ -195,6 +201,15 @@ export async function uploadCustomTemplate(
           },
         });
 
+      /* ── Save PDF file to disk for viewing ── */
+      try {
+        await fs.mkdir(TEMPLATE_PDF_DIR, { recursive: true });
+        await fs.writeFile(path.join(TEMPLATE_PDF_DIR, TEMPLATE_PDF_NAME), buffer);
+      } catch (fsError) {
+        console.error("Failed to save PDF to disk:", fsError);
+        // Non-fatal — DB record was saved successfully
+      }
+
       await audit({
         userId: user.id,
         action: "custom_template.upload",
@@ -224,6 +239,13 @@ export async function deleteCustomTemplate(): Promise<TemplateActionResult> {
       await db
         .delete(customReportTemplates)
         .where(eq(customReportTemplates.id, 1));
+
+      /* ── Remove PDF file from disk ── */
+      try {
+        await fs.unlink(path.join(TEMPLATE_PDF_DIR, TEMPLATE_PDF_NAME));
+      } catch {
+        // File may not exist — ignore
+      }
 
       await audit({
         userId: user.id,

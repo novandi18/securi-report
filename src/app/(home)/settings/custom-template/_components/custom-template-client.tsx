@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Save,
   Code,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
@@ -261,14 +262,25 @@ export default function CustomTemplateClient({
               <CheckCircle2 size={16} className="text-green-500" />
               Active Template
             </h4>
-            <button
-              type="button"
-              onClick={() => setShowDeleteDialog(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
-            >
-              <Trash2 size={14} />
-              Delete
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href="/uploads/templates/template.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/5 dark:border-primary/40 dark:hover:bg-primary/10"
+              >
+                <ExternalLink size={14} />
+                View PDF
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowDeleteDialog(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -372,6 +384,19 @@ export default function CustomTemplateClient({
                   )}
                   Save Changes
                 </button>
+              )}
+
+              {/* View LaTeX as PDF Button */}
+              {latexContent && !latexDirty && (
+                <a
+                  href="/api/template-latex-pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/5 dark:border-primary/40 dark:hover:bg-primary/10"
+                >
+                  <ExternalLink size={14} />
+                  View as PDF
+                </a>
               )}
 
               {/* Regenerate Button */}
