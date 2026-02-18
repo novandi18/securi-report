@@ -12,6 +12,10 @@ import {
   Calendar,
   HardDrive,
   Eye,
+  Sparkles,
+  RefreshCw,
+  Save,
+  Code,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
@@ -19,8 +23,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   uploadCustomTemplate,
   deleteCustomTemplate,
+  generateLatexFromTemplate,
+  saveLatexContent,
 } from "@/lib/actions/template-actions";
 import type { TemplateData } from "@/lib/actions/template-actions";
+import { LatexPreview } from "@/components/latex-editor/preview";
 
 /* ─── Props ─────────────────────────────────────────── */
 
@@ -45,6 +52,17 @@ export default function CustomTemplateClient({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  /* LaTeX state */
+  const [generating, setGenerating] = useState(false);
+  const [savingLatex, setSavingLatex] = useState(false);
+  const [latexContent, setLatexContent] = useState<string>(
+    initialTemplate?.latexContent ?? "",
+  );
+  const [latexDirty, setLatexDirty] = useState(false);
+  const [latexTab, setLatexTab] = useState<"editor" | "preview" | "split">(
+    "split",
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -85,6 +103,7 @@ export default function CustomTemplateClient({
           id: 1,
           fileName: file.name,
           extractedText: "Reloading…",
+          latexContent: null,
           fileSizeKb: Math.round(file.size / 1024),
           updatedAt: new Date(),
         });
@@ -115,6 +134,8 @@ export default function CustomTemplateClient({
       addToast("Template deleted successfully.", "success");
       setTemplate(null);
       setShowPreview(false);
+      setLatexContent("");
+      setLatexDirty(false);
     } catch {
       addToast("An unexpected error occurred while deleting.", "error");
     } finally {
@@ -122,6 +143,60 @@ export default function CustomTemplateClient({
       setShowDeleteDialog(false);
     }
   }, [addToast]);
+
+  /* ── Generate LaTeX handler ── */
+  const handleGenerateLatex = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const result = await generateLatexFromTemplate();
+
+      if (!result.success) {
+        addToast(result.error || "LaTeX generation failed.", "error");
+        return;
+      }
+
+      if (result.latexContent) {
+        setLatexContent(result.latexContent);
+        setLatexDirty(false);
+        setTemplate((prev) =>
+          prev ? { ...prev, latexContent: result.latexContent! } : prev,
+        );
+        addToast("LaTeX generated successfully from PDF template.", "success");
+      }
+    } catch {
+      addToast("An unexpected error occurred during generation.", "error");
+    } finally {
+      setGenerating(false);
+    }
+  }, [addToast]);
+
+  /* ── Save LaTeX handler ── */
+  const handleSaveLatex = useCallback(async () => {
+    if (!latexContent.trim()) {
+      addToast("LaTeX content is empty.", "error");
+      return;
+    }
+
+    setSavingLatex(true);
+    try {
+      const result = await saveLatexContent(latexContent);
+
+      if (!result.success) {
+        addToast(result.error || "Failed to save LaTeX.", "error");
+        return;
+      }
+
+      setLatexDirty(false);
+      setTemplate((prev) =>
+        prev ? { ...prev, latexContent } : prev,
+      );
+      addToast("LaTeX content saved successfully.", "success");
+    } catch {
+      addToast("An unexpected error occurred while saving.", "error");
+    } finally {
+      setSavingLatex(false);
+    }
+  }, [addToast, latexContent]);
 
   /* ── Drag & Drop ── */
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -269,6 +344,213 @@ export default function CustomTemplateClient({
                 </pre>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── LaTeX Generation Section ─── */}
+      {template && (
+        <div className="rounded-xl border border-stroke bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-dark dark:text-white">
+              <Code size={16} className="text-primary" />
+              LaTeX Template
+            </h4>
+            <div className="flex items-center gap-2">
+              {/* Save Button */}
+              {latexContent && latexDirty && (
+                <button
+                  type="button"
+                  onClick={handleSaveLatex}
+                  disabled={savingLatex}
+                  className="flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-50 dark:border-green-900/40 dark:text-green-400 dark:hover:bg-green-950/30"
+                >
+                  {savingLatex ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Save size={14} />
+                  )}
+                  Save Changes
+                </button>
+              )}
+
+              {/* Regenerate Button */}
+              {latexContent && (
+                <button
+                  type="button"
+                  onClick={handleGenerateLatex}
+                  disabled={generating}
+                  className="flex items-center gap-1.5 rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50 disabled:opacity-50 dark:border-amber-900/40 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                >
+                  {generating ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={14} />
+                  )}
+                  Regenerate
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* No LaTeX yet — Generate button */}
+          {!latexContent && !generating && (
+            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-stroke px-6 py-12 text-center dark:border-dark-3">
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
+                <Sparkles size={24} className="text-primary" />
+              </div>
+              <p className="text-sm font-medium text-dark dark:text-white">
+                Generate LaTeX from your PDF template
+              </p>
+              <p className="mt-1 mb-4 text-xs text-dark-5 dark:text-dark-6">
+                Gunakan Gemini AI untuk mengkonversi teks dari PDF menjadi
+                dokumen LaTeX terstruktur
+              </p>
+              <button
+                type="button"
+                onClick={handleGenerateLatex}
+                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+              >
+                <Sparkles size={16} />
+                Generate LaTeX
+              </button>
+            </div>
+          )}
+
+          {/* Generating state */}
+          {generating && (
+            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-6 py-12 text-center dark:bg-primary/10">
+              <Loader2
+                size={32}
+                className="mb-3 animate-spin text-primary"
+              />
+              <p className="text-sm font-medium text-dark dark:text-white">
+                Generating LaTeX with Gemini AI…
+              </p>
+              <p className="mt-1 text-xs text-dark-5 dark:text-dark-6">
+                This may take a moment depending on the document length.
+              </p>
+            </div>
+          )}
+
+          {/* LaTeX Editor + Preview */}
+          {latexContent && !generating && (
+            <div>
+              {/* Tab Switcher */}
+              <div className="mb-3 flex items-center gap-1 rounded-lg border border-stroke bg-gray-1 p-1 dark:border-dark-3 dark:bg-dark-3/30">
+                {(
+                  [
+                    { key: "editor", label: "Editor", icon: Code },
+                    { key: "preview", label: "Preview", icon: Eye },
+                    { key: "split", label: "Split", icon: Eye },
+                  ] as const
+                ).map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setLatexTab(key)}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                      latexTab === key
+                        ? "bg-white text-primary shadow-sm dark:bg-dark-2"
+                        : "text-dark-5 hover:text-dark dark:text-dark-6 dark:hover:text-white",
+                    )}
+                  >
+                    <Icon size={13} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Editor / Preview panels */}
+              <div
+                className={cn(
+                  "gap-4",
+                  latexTab === "split"
+                    ? "grid grid-cols-1 lg:grid-cols-2"
+                    : "block",
+                )}
+              >
+                {/* Editor Panel */}
+                {(latexTab === "editor" || latexTab === "split") && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-dark-5 dark:text-dark-6">
+                      LaTeX Editor
+                    </label>
+                    <textarea
+                      value={latexContent}
+                      onChange={(e) => {
+                        setLatexContent(e.target.value);
+                        setLatexDirty(true);
+                      }}
+                      className="h-[500px] w-full resize-y rounded-lg border border-stroke bg-gray-1 p-4 font-mono text-xs leading-relaxed text-dark outline-none transition-colors focus:border-primary dark:border-dark-3 dark:bg-dark-3/20 dark:text-white dark:focus:border-primary"
+                      spellCheck={false}
+                    />
+                  </div>
+                )}
+
+                {/* Preview Panel */}
+                {(latexTab === "preview" || latexTab === "split") && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-dark-5 dark:text-dark-6">
+                      LaTeX Preview
+                    </label>
+                    <div className="h-[500px] overflow-auto">
+                      <LatexPreview
+                        content={latexContent}
+                        height="100%"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Dirty indicator & actions */}
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-xs text-dark-5 dark:text-dark-6">
+                  {latexDirty ? (
+                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                      <AlertTriangle size={12} />
+                      Unsaved changes
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                      <CheckCircle2 size={12} />
+                      Saved
+                    </span>
+                  )}
+                </p>
+                {latexDirty && (
+                  <button
+                    type="button"
+                    onClick={handleSaveLatex}
+                    disabled={savingLatex}
+                    className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {savingLatex ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}
+                    Save LaTeX
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Info hint */}
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-blue-200/60 bg-blue-50/50 px-4 py-3 dark:border-blue-900/30 dark:bg-blue-950/20">
+            <Sparkles
+              size={16}
+              className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400"
+            />
+            <p className="text-xs text-blue-700 dark:text-blue-300">
+              LaTeX dihasilkan oleh Gemini AI berdasarkan teks yang diekstrak
+              dari PDF. Anda dapat mengedit hasilnya secara manual atau
+              melakukan regenerate jika hasilnya kurang sesuai. Perubahan manual
+              harus disimpan sebelum meninggalkan halaman.
+            </p>
           </div>
         </div>
       )}

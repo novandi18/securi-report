@@ -5,6 +5,7 @@ import { customReportTemplates } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, withAccessControl, audit } from "@/lib/security";
+import { GoogleGenAI } from "@google/genai";
 // Import the lib file directly to avoid pdf-parse's index.js which loads a test PDF at import time
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require("pdf-parse/lib/pdf-parse");
@@ -20,6 +21,7 @@ export type TemplateData = {
   id: number;
   fileName: string;
   extractedText: string;
+  latexContent: string | null;
   fileSizeKb: number | null;
   updatedAt: Date | null;
 };
@@ -83,6 +85,7 @@ export async function getCustomTemplate(): Promise<GetTemplateResult> {
           id: row.id,
           fileName: row.fileName,
           extractedText: row.extractedText,
+          latexContent: row.latexContent,
           fileSizeKb: row.fileSizeKb,
           updatedAt: row.updatedAt,
         },
@@ -233,6 +236,172 @@ export async function deleteCustomTemplate(): Promise<TemplateActionResult> {
     } catch (error) {
       console.error("Failed to delete template:", error);
       return { success: false, error: "Failed to delete template." };
+    }
+  });
+}
+
+/* ─── Generate LaTeX via Gemini ─────────────────────── */
+
+export type GenerateLatexResult = {
+  success: boolean;
+  latexContent?: string;
+  error?: string;
+};
+
+export async function generateLatexFromTemplate(): Promise<GenerateLatexResult> {
+  return withAccessControl(async () => {
+    const user = await requireAdmin();
+
+    /* ── Validate env ── */
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-preview-05-20";
+
+    if (!apiKey) {
+      return {
+        success: false,
+        error: "Gemini API key is not configured. Set GEMINI_API_KEY in environment variables.",
+      };
+    }
+
+    /* ── Fetch existing template ── */
+    const [row] = await db
+      .select()
+      .from(customReportTemplates)
+      .where(eq(customReportTemplates.id, 1))
+      .limit(1);
+
+    if (!row) {
+      return {
+        success: false,
+        error: "No template uploaded. Please upload a PDF template first.",
+      };
+    }
+
+    /* ── Send extracted text to Gemini for LaTeX generation ── */
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+
+      const prompt = `You are an expert document converter specializing in LaTeX. Convert the following document text into a well-structured LaTeX document.
+
+Requirements:
+- Use proper LaTeX formatting with sections, subsections, lists, tables, and text formatting as appropriate
+- Preserve the original document structure and hierarchy
+- Use \\section{}, \\subsection{}, \\subsubsection{} for headings
+- Use \\textbf{} for bold text, \\textit{} for italic text
+- Use itemize/enumerate environments for lists
+- Use tabular environment for any tables
+- Use \\href{}{} for URLs/links
+- Do NOT include \\documentclass, \\begin{document}, \\end{document}, or preamble — only the body content
+- Do NOT wrap the output in code blocks or markdown — return raw LaTeX only
+- Preserve all content faithfully — do not summarize or omit any sections
+- If there are page numbers, headers, or footers from the original PDF, remove them
+- Ensure the LaTeX is clean and ready for rendering
+
+Document text:
+${row.extractedText}`;
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      });
+
+      const latexContent = response.text?.trim();
+
+      if (!latexContent) {
+        return {
+          success: false,
+          error: "Gemini returned an empty response. Please try regenerating.",
+        };
+      }
+
+      // Clean up: remove any code block wrappers if present
+      const cleaned = latexContent
+        .replace(/^```(?:latex|tex)?\s*\n?/i, "")
+        .replace(/\n?```\s*$/i, "")
+        .trim();
+
+      /* ── Save to DB ── */
+      await db
+        .update(customReportTemplates)
+        .set({ latexContent: cleaned })
+        .where(eq(customReportTemplates.id, 1));
+
+      await audit({
+        userId: user.id,
+        action: "custom_template.generate_latex",
+        detail: `Generated LaTeX from template: ${row.fileName} (${cleaned.length} chars)`,
+      });
+
+      revalidatePath("/settings/custom-template");
+
+      return { success: true, latexContent: cleaned };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error("Gemini generation error:", msg);
+
+      if (msg.includes("API_KEY") || msg.includes("401") || msg.includes("403")) {
+        return {
+          success: false,
+          error: "Invalid Gemini API key. Please check your GEMINI_API_KEY configuration.",
+        };
+      }
+
+      if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED")) {
+        return {
+          success: false,
+          error: "Gemini rate limit reached. Please wait a moment and try again.",
+        };
+      }
+
+      return {
+        success: false,
+        error: "Failed to generate LaTeX. Please try again.",
+      };
+    }
+  });
+}
+
+/* ─── Save Edited LaTeX ────────────────────────────── */
+
+export async function saveLatexContent(
+  latexContent: string,
+): Promise<TemplateActionResult> {
+  return withAccessControl(async () => {
+    const user = await requireAdmin();
+
+    if (!latexContent || typeof latexContent !== "string") {
+      return { success: false, error: "No LaTeX content provided." };
+    }
+
+    if (latexContent.length > 5_000_000) {
+      return { success: false, error: "LaTeX content is too large (max 5 MB)." };
+    }
+
+    try {
+      const result = await db
+        .update(customReportTemplates)
+        .set({ latexContent: latexContent.trim() })
+        .where(eq(customReportTemplates.id, 1));
+
+      if (result[0].affectedRows === 0) {
+        return {
+          success: false,
+          error: "No template found. Please upload a PDF template first.",
+        };
+      }
+
+      await audit({
+        userId: user.id,
+        action: "custom_template.save_latex",
+        detail: `Saved edited LaTeX content (${latexContent.trim().length} chars)`,
+      });
+
+      revalidatePath("/settings/custom-template");
+
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to save LaTeX:", error);
+      return { success: false, error: "Failed to save LaTeX content." };
     }
   });
 }
