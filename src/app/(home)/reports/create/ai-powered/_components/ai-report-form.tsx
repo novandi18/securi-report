@@ -35,6 +35,7 @@ import {
   AIErrorShake,
   AIWaveShimmer,
 } from "@/components/ui/ai-skeleton";
+import { generateReportWithAI } from "@/lib/actions/ai-generate";
 
 /* ─── Types ─────────────────────────────────────────── */
 
@@ -79,38 +80,6 @@ const outputRevealVariants = {
   },
 };
 
-/* ─── Simulated AI Responses ────────────────────────── */
-
-const MOCK_AI_RESPONSE: GeneratedContent = {
-  executiveSummary:
-    "\\section{Executive Summary}\n\nA comprehensive security assessment was conducted on the target application infrastructure. " +
-    "The engagement identified \\textbf{3 Critical}, \\textbf{5 High}, and \\textbf{8 Medium} severity vulnerabilities " +
-    "across the application stack. Key findings include SQL injection vectors in the authentication module, " +
-    "insecure direct object references (IDOR) in the API layer, and insufficient input validation on file upload endpoints.\n\n" +
-    "The overall security posture requires \\textbf{immediate remediation} of critical findings before production deployment.",
-  impact:
-    "\\section{Impact Analysis}\n\n\\textbf{Business Impact:} Exploitation of the identified vulnerabilities could lead to " +
-    "unauthorized access to sensitive customer data, including PII and financial records. " +
-    "The SQL injection vulnerability alone could enable full database compromise.\n\n" +
-    "\\textbf{Technical Impact:} An attacker could achieve remote code execution (RCE) through " +
-    "the chained exploitation of the file upload vulnerability and path traversal finding. " +
-    "This would grant complete control over the application server.",
-  recommendation:
-    "\\section{Recommendations}\n\n\\begin{enumerate}\n" +
-    "\\item Implement parameterized queries across all database interactions\n" +
-    "\\item Deploy role-based access control (RBAC) to mitigate IDOR findings\n" +
-    "\\item Add server-side file type validation with magic number verification\n" +
-    "\\item Enable Content Security Policy (CSP) headers to reduce XSS impact\n" +
-    "\\item Conduct a follow-up assessment after remediation\n" +
-    "\\end{enumerate}",
-  scope:
-    "\\section{Scope}\n\nThe assessment covered the following targets:\n\\begin{itemize}\n" +
-    "\\item Web Application: \\texttt{https://app.example.com}\n" +
-    "\\item REST API: \\texttt{https://api.example.com/v2}\n" +
-    "\\item Authentication Service: \\texttt{https://auth.example.com}\n" +
-    "\\end{itemize}",
-};
-
 /* ─── Main Component ────────────────────────────────── */
 
 export default function AIReportForm({ customers }: AIReportFormProps) {
@@ -121,12 +90,14 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   /* ── State ── */
   const [step, setStep] = useState<GenerationStep>("idle");
   const [errorShake, setErrorShake] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [generated, setGenerated] = useState<GeneratedContent | null>(null);
   const [revealIndex, setRevealIndex] = useState(0);
 
   // Identity & Metadata
   const [title, setTitle] = useState("");
   const [reportId] = useState(generatePenDocId);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
 
   // AI Raw Input
   const [rawFindings, setRawFindings] = useState("");
@@ -147,6 +118,10 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const isFormValid =
     title.trim().length > 0 && rawFindings.trim().length > 0;
 
+  /* ── Resolve customer name from selected ID ── */
+  const selectedCustomerName =
+    customers.find((c) => c.id === selectedCustomerId)?.name ?? "";
+
   /* ── Generate handler ── */
   const handleGenerate = useCallback(async () => {
     if (!isFormValid) return;
@@ -155,17 +130,26 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     setGenerated(null);
     setRevealIndex(0);
     setErrorShake(false);
+    setErrorMessage("");
 
     try {
-      // Simulate AI API call — replace with real endpoint
-      await new Promise((resolve) => setTimeout(resolve, 2800));
+      const result = await generateReportWithAI({
+        title,
+        customerName: selectedCustomerName,
+        rawNotes: rawFindings,
+        aiContext,
+      });
 
-      // 10% simulated errors for demo
-      if (Math.random() < 0.1) {
-        throw new Error("AI service temporarily unavailable");
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Unknown generation error.");
       }
 
-      setGenerated(MOCK_AI_RESPONSE);
+      setGenerated({
+        executiveSummary: result.data.executive_summary,
+        impact: result.data.impact,
+        recommendation: result.data.recommendation,
+        scope: scopeValue,
+      });
       setStep("done");
 
       // Scroll to outputs
@@ -175,12 +159,15 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
           block: "start",
         });
       }, 300);
-    } catch {
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "AI service error.";
+      setErrorMessage(msg);
       setStep("error");
       setErrorShake(true);
       setTimeout(() => setErrorShake(false), 500);
     }
-  }, [isFormValid]);
+  }, [isFormValid, title, selectedCustomerName, rawFindings, aiContext, scopeValue]);
 
   /* ── Section reveal sequencing ── */
   const handleSectionRevealed = useCallback(() => {
@@ -250,6 +237,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               name="customerId"
               placeholder="Select a customer"
               items={customerOptions}
+              onChange={setSelectedCustomerId}
             />
 
             {/* Report ID */}
@@ -532,7 +520,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                     Generation failed
                   </p>
                   <p className="text-xs text-red-600/80 dark:text-red-400/70">
-                    The AI service encountered an error. Please try again.
+                    {errorMessage || "The AI service encountered an error. Please try again."}
                   </p>
                 </div>
                 <button
