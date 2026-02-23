@@ -11,7 +11,7 @@ const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 
 /**
- * Server action: upload an image for use in LaTeX reports.
+ * Server action: upload an image for use in Markdown reports.
  *
  * Validates:
  *  - Authentication

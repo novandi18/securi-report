@@ -66,9 +66,9 @@ export function getJSONPaths(
   return results;
 }
 
-export function jsonToLatexListing(json: string): string {
+export function jsonToMarkdownCodeBlock(json: string): string {
   const pretty = prettifyJSON(json);
-  return `\\begin{lstlisting}[language=json, caption={JSON Data}]\n${pretty}\n\\end{lstlisting}`;
+  return `\`\`\`json\n${pretty}\n\`\`\``;
 }
 
 // ─── Hashing Utilities ──────────────────────────────────────
@@ -115,17 +115,15 @@ export async function hashAll(
   return { MD5: md5Hash, "SHA-1": sha1, "SHA-256": sha256, "SHA-512": sha512 };
 }
 
-export function hashTableToLatex(
+export function hashTableToMarkdown(
   hashes: Record<string, string>,
   input: string,
 ): string {
-  let latex =
-    "\\begin{table}[h]\n\\centering\n\\caption{Hash Comparison}\n\\begin{tabular}{|l|l|}\n\\hline\n\\textbf{Algorithm} & \\textbf{Hash} \\\\\n\\hline\n";
+  let md = "| Algorithm | Hash |\n| --- | --- |\n";
   for (const [algo, hash] of Object.entries(hashes)) {
-    latex += `${algo} & \\texttt{${hash}} \\\\\n\\hline\n`;
+    md += `| ${algo} | \`${hash}\` |\n`;
   }
-  latex += `\\end{tabular}\n\\label{tab:hash-comparison}\n\\end{table}`;
-  return latex;
+  return md;
 }
 
 // ─── AES-256-CBC Encryption / Decryption ────────────────────
@@ -457,10 +455,10 @@ export function detectEncoding(input: string): DetectedEncoding {
   return "unknown";
 }
 
-// ─── LaTeX Verbatim Output ──────────────────────────────────
+// ─── Markdown Code Block Output ──────────────────────────────────
 
-export function toLatexVerbatim(content: string, label = "Encoded Output"): string {
-  return `\\begin{verbatim}\n% ${label}\n${content}\n\\end{verbatim}`;
+export function toMarkdownCodeBlock(content: string, label = "Encoded Output"): string {
+  return `\`\`\`\n<!-- ${label} -->\n${content}\n\`\`\``;
 }
 
 // ─── Pure-JS MD5 Implementation ─────────────────────────────

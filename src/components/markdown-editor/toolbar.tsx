@@ -4,36 +4,31 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   Bold,
   Italic,
-  Underline,
   Strikethrough,
   List,
   ListOrdered,
   Code,
   Quote,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Link2,
   ChevronDown,
-  Sigma,
   Table,
+  Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { EditorState } from "@/lib/latex-helpers";
+import type { EditorState } from "@/lib/markdown-helpers";
 import {
-  wrapInlineCommand,
-  insertSection,
+  insertBold,
+  insertItalic,
+  insertStrikethrough,
+  insertInlineCode,
+  insertHeading,
   insertList,
   insertCodeBlock,
   insertQuote,
-  insertAlignment,
   insertLink,
-  insertInlineMath,
-  insertDisplayMath,
   insertTable,
-  wrapSelection,
-} from "@/lib/latex-helpers";
-
+  insertHorizontalRule,
+} from "@/lib/markdown-helpers";
 
 /* ───── Types ─────────────────────────────────────── */
 
@@ -78,11 +73,12 @@ function Divider() {
 
 /* ───── Format Dropdown ───────────────────────────── */
 
-const SECTION_OPTIONS = [
+const HEADING_OPTIONS = [
   { label: "Normal Text", value: "normal" },
-  { label: "Section", value: "section" },
-  { label: "Subsection", value: "subsection" },
-  { label: "Subsubsection", value: "subsubsection" },
+  { label: "Heading 1", value: "h1" },
+  { label: "Heading 2", value: "h2" },
+  { label: "Heading 3", value: "h3" },
+  { label: "Heading 4", value: "h4" },
 ] as const;
 
 function FormatDropdown({
@@ -100,7 +96,7 @@ function FormatDropdown({
       setOpen(false);
       if (value === "normal") return;
       const s = getState();
-      applyState(insertSection(s, value as "section" | "subsection" | "subsubsection"));
+      applyState(insertHeading(s, value as "h1" | "h2" | "h3" | "h4"));
     },
     [getState, applyState],
   );
@@ -133,7 +129,7 @@ function FormatDropdown({
 
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 w-44 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
-          {SECTION_OPTIONS.map((opt) => (
+          {HEADING_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -143,62 +139,6 @@ function FormatDropdown({
               {opt.label}
             </button>
           ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ───── Math Dropdown ─────────────────────────────── */
-
-function MathDropdown({
-  getState,
-  applyState,
-}: {
-  getState: () => EditorState;
-  applyState: (s: EditorState) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <ToolbarBtn
-        icon={<Sigma size={15} />}
-        tooltip="Math"
-        onClick={() => setOpen(!open)}
-      />
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-40 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              applyState(insertInlineMath(getState()));
-            }}
-            className="flex w-full items-center px-3 py-1.5 text-left text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
-          >
-            Inline Math <span className="ml-auto text-gray-400 dark:text-slate-500">$…$</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              applyState(insertDisplayMath(getState()));
-            }}
-            className="flex w-full items-center px-3 py-1.5 text-left text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
-          >
-            Display Math <span className="ml-auto text-gray-400 dark:text-slate-500">$$…$$</span>
-          </button>
         </div>
       )}
     </div>
@@ -341,62 +281,6 @@ function TableButton({
   );
 }
 
-/* ───── Alignment Dropdown ────────────────────────── */
-
-function AlignDropdown({
-  getState,
-  applyState,
-}: {
-  getState: () => EditorState;
-  applyState: (s: EditorState) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const items: { icon: React.ReactNode; label: string; value: "flushleft" | "center" | "flushright" }[] = [
-    { icon: <AlignLeft size={14} />, label: "Left", value: "flushleft" },
-    { icon: <AlignCenter size={14} />, label: "Center", value: "center" },
-    { icon: <AlignRight size={14} />, label: "Right", value: "flushright" },
-  ];
-
-  return (
-    <div ref={ref} className="relative">
-      <ToolbarBtn
-        icon={<AlignLeft size={15} />}
-        tooltip="Alignment"
-        onClick={() => setOpen(!open)}
-      />
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-32 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
-          {items.map((it) => (
-            <button
-              key={it.value}
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                applyState(insertAlignment(getState(), it.value));
-              }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
-            >
-              {it.icon}
-              {it.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ═══════════════════════════════════════════════════
    Main Toolbar
    ═══════════════════════════════════════════════════ */
@@ -419,23 +303,18 @@ export default function Toolbar({ getState, applyState }: ToolbarProps) {
       {/* Inline text styles */}
       <ToolbarBtn
         icon={<Bold size={15} />}
-        tooltip="Bold (\\textbf)"
-        onClick={() => act((s) => wrapInlineCommand(s, "textbf"))}
+        tooltip="Bold (**text**)"
+        onClick={() => act((s) => insertBold(s))}
       />
       <ToolbarBtn
         icon={<Italic size={15} />}
-        tooltip="Italic (\\textit)"
-        onClick={() => act((s) => wrapInlineCommand(s, "textit"))}
-      />
-      <ToolbarBtn
-        icon={<Underline size={15} />}
-        tooltip="Underline (\\underline)"
-        onClick={() => act((s) => wrapInlineCommand(s, "underline"))}
+        tooltip="Italic (*text*)"
+        onClick={() => act((s) => insertItalic(s))}
       />
       <ToolbarBtn
         icon={<Strikethrough size={15} />}
-        tooltip="Strikethrough (\\sout)"
-        onClick={() => act((s) => wrapInlineCommand(s, "sout"))}
+        tooltip="Strikethrough (~~text~~)"
+        onClick={() => act((s) => insertStrikethrough(s))}
       />
 
       <Divider />
@@ -444,12 +323,12 @@ export default function Toolbar({ getState, applyState }: ToolbarProps) {
       <ToolbarBtn
         icon={<List size={15} />}
         tooltip="Bullet List"
-        onClick={() => act((s) => insertList(s, "itemize"))}
+        onClick={() => act((s) => insertList(s, "bullet"))}
       />
       <ToolbarBtn
         icon={<ListOrdered size={15} />}
         tooltip="Numbered List"
-        onClick={() => act((s) => insertList(s, "enumerate"))}
+        onClick={() => act((s) => insertList(s, "ordered"))}
       />
 
       <Divider />
@@ -457,34 +336,35 @@ export default function Toolbar({ getState, applyState }: ToolbarProps) {
       {/* Code & Quote */}
       <ToolbarBtn
         icon={<Code size={15} />}
-        tooltip="Code Block"
+        tooltip="Code Block (```)"
         onClick={() => act((s) => insertCodeBlock(s))}
       />
       <ToolbarBtn
         icon={<Quote size={15} />}
-        tooltip="Block Quote"
+        tooltip="Block Quote (>)"
         onClick={() => act((s) => insertQuote(s))}
       />
 
       {/* Inline code */}
       <ToolbarBtn
         icon={
-          <span className="font-mono text-[11px] leading-none">{"{}"}</span>
+          <span className="font-mono text-[11px] leading-none">{"`"}</span>
         }
-        tooltip="Inline Code (\\texttt)"
-        onClick={() => act((s) => wrapInlineCommand(s, "texttt"))}
+        tooltip="Inline Code (`code`)"
+        onClick={() => act((s) => insertInlineCode(s))}
       />
 
       <Divider />
 
-      {/* Math */}
-      <MathDropdown getState={getState} applyState={applyState} />
+      {/* Horizontal Rule */}
+      <ToolbarBtn
+        icon={<Minus size={15} />}
+        tooltip="Horizontal Rule (---)"
+        onClick={() => act((s) => insertHorizontalRule(s))}
+      />
 
       {/* Table */}
       <TableButton getState={getState} applyState={applyState} />
-
-      {/* Alignment */}
-      <AlignDropdown getState={getState} applyState={applyState} />
 
       {/* Link */}
       <LinkButton getState={getState} applyState={applyState} />

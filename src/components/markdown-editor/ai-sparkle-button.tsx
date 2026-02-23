@@ -4,7 +4,7 @@ import React, { useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Sparkles, Wand2, FileText, CheckCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { EditorState } from "@/lib/latex-helpers";
+import type { EditorState } from "@/lib/markdown-helpers";
 
 /* ─── Types ─────────────────────────────────────────── */
 
@@ -43,7 +43,7 @@ const AI_OPTIONS: AIOption[] = [
   },
   {
     id: "proofread",
-    label: "Proofread LaTeX",
+    label: "Proofread Markdown",
     description: "Fix syntax & formatting",
     icon: <Sparkles size={14} />,
   },
@@ -98,8 +98,8 @@ export function AISparkleButton({ getState, applyState }: AISparkleButtonProps) 
     // Placeholder: in a real implementation, send `selectedText` + `action`
     // to an AI endpoint, then apply the result.
     const placeholder = selectedText
-      ? `% AI ${action}: ${selectedText}`
-      : `% AI ${action}: No text selected. Select text and try again.`;
+      ? `<!-- AI ${action}: ${selectedText} -->`
+      : `<!-- AI ${action}: No text selected. Select text and try again. -->`;
 
     applyState({
       text:
@@ -128,7 +128,6 @@ export function AISparkleButton({ getState, applyState }: AISparkleButtonProps) 
             ? "cursor-wait border-purple-300 bg-purple-50 text-purple-400 dark:border-purple-700 dark:bg-purple-900/20 dark:text-purple-300"
             : "border-purple-200 bg-purple-50 text-purple-600 hover:border-purple-400 hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:border-purple-600 dark:hover:bg-purple-900/40",
         )}
-        /* Subtle pulsing glow on hover */
         whileHover={
           !prefersReduced && !processing
             ? { scale: [1, 1.05, 1], transition: { duration: 1.2, repeat: Infinity } }
@@ -160,7 +159,6 @@ export function AISparkleButton({ getState, applyState }: AISparkleButtonProps) 
             className={cn(
               "absolute right-0 top-full z-[99999] mt-2 w-56 origin-top-right",
               "rounded-xl border border-white/20 p-1.5 shadow-xl",
-              /* Glassmorphism */
               "bg-white/80 backdrop-blur-md dark:bg-slate-800/80 dark:border-slate-600/40",
             )}
           >

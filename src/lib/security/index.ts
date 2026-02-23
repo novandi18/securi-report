@@ -2,7 +2,7 @@
  * Security module barrel export.
  *
  * All security utilities are consolidated here for clean imports:
- *   import { requireAuth, audit, sanitizeLatex, checkLoginRateLimit } from "@/lib/security";
+ *   import { requireAuth, audit, sanitizeMarkdown, checkLoginRateLimit } from "@/lib/security";
  */
 
 export {
@@ -30,10 +30,8 @@ export {
 } from "./rate-limiter";
 
 export {
-  sanitizeLatex,
-  SAFE_KATEX_OPTIONS,
-  SAFE_KATEX_PDF_OPTIONS,
-} from "./latex-sanitizer";
+  sanitizeMarkdown,
+} from "./markdown-sanitizer";
 
 export {
   audit,

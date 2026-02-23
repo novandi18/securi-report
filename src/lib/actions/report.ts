@@ -13,7 +13,7 @@ import { syncDocument, removeDocument, INDEX } from "@/lib/meilisearch";
 import { existsSync } from "fs";
 import { unlink } from "fs/promises";
 import path from "path";
-import { sanitizeLatex, audit, checkDeleteRateLimit } from "@/lib/security";
+import { sanitizeMarkdown, audit, checkDeleteRateLimit } from "@/lib/security";
 
 export type ActionResult = {
   success: boolean;
@@ -216,13 +216,13 @@ export async function createReportAction(
       customerId: parsed.data.customerId,
       reportIdCustom,
       title: parsed.data.title,
-      executiveSummary: sanitizeLatex(parsed.data.executiveSummary ?? "") || null,
-      scope: sanitizeLatex(parsed.data.scope ?? "") || null,
-      methodology: sanitizeLatex(parsed.data.methodology ?? "") || null,
+      executiveSummary: sanitizeMarkdown(parsed.data.executiveSummary ?? "") || null,
+      scope: sanitizeMarkdown(parsed.data.scope ?? "") || null,
+      methodology: sanitizeMarkdown(parsed.data.methodology ?? "") || null,
       referencesFramework: parsed.data.referencesFramework ?? null,
       cvssVector: parsed.data.cvssVector ?? null,
-      impact: sanitizeLatex(parsed.data.impact ?? "") || null,
-      recommendationSummary: sanitizeLatex(parsed.data.recommendationSummary ?? "") || null,
+      impact: sanitizeMarkdown(parsed.data.impact ?? "") || null,
+      recommendationSummary: sanitizeMarkdown(parsed.data.recommendationSummary ?? "") || null,
       auditDate: parsed.data.auditDate ?? null,
       status: parsed.data.status,
       createdBy: session.user.id,
@@ -408,13 +408,13 @@ export async function updateReportAction(
         customerId: parsed.data.customerId,
         reportIdCustom: parsed.data.reportIdCustom ?? null,
         title: parsed.data.title,
-        executiveSummary: sanitizeLatex(parsed.data.executiveSummary ?? "") || null,
-        scope: sanitizeLatex(parsed.data.scope ?? "") || null,
-        methodology: sanitizeLatex(parsed.data.methodology ?? "") || null,
+        executiveSummary: sanitizeMarkdown(parsed.data.executiveSummary ?? "") || null,
+        scope: sanitizeMarkdown(parsed.data.scope ?? "") || null,
+        methodology: sanitizeMarkdown(parsed.data.methodology ?? "") || null,
         referencesFramework: parsed.data.referencesFramework ?? null,
         cvssVector: parsed.data.cvssVector ?? null,
-        impact: sanitizeLatex(parsed.data.impact ?? "") || null,
-        recommendationSummary: sanitizeLatex(parsed.data.recommendationSummary ?? "") || null,
+        impact: sanitizeMarkdown(parsed.data.impact ?? "") || null,
+        recommendationSummary: sanitizeMarkdown(parsed.data.recommendationSummary ?? "") || null,
         auditDate: parsed.data.auditDate ?? null,
         status: parsed.data.status,
       })
@@ -595,7 +595,7 @@ export async function deleteReportAction(id: string): Promise<ActionResult> {
         .where(eq(deliverables.reportId, id)),
     ]);
 
-    // ── Extract inline image URLs from LaTeX content fields ──
+    // ── Extract inline image URLs from Markdown content fields ──
     const contentFields = [
       existing.executiveSummary,
       existing.scope,

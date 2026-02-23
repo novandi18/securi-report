@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/toast";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { Select } from "@/components/FormElements/select";
-import { LatexEditor } from "@/components/latex-editor";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { CvssInput } from "@/components/FormElements/cvss-input";
 import type { ActionResult } from "@/lib/actions/template";
 
@@ -269,47 +269,47 @@ export default function TemplateForm({
         </div>
       </div>
 
-      {/* ─── Section 4: Description (LaTeX) ─── */}
+      {/* ─── Section 4: Description (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Description
         </h3>
-        <LatexEditor
+        <MarkdownEditor
           label=""
           name="description"
           defaultValue={val.description}
           height="250px"
-          placeholder="Describe the vulnerability in LaTeX..."
+          placeholder="Describe the vulnerability in Markdown..."
           error={fieldErrors?.description?.[0]}
         />
       </div>
 
-      {/* ─── Section 5: Impact (LaTeX) ─── */}
+      {/* ─── Section 5: Impact (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Impact
         </h3>
-        <LatexEditor
+        <MarkdownEditor
           label=""
           name="impact"
           defaultValue={val.impact}
           height="200px"
-          placeholder="Describe the impact in LaTeX..."
+          placeholder="Describe the impact in Markdown..."
           error={fieldErrors?.impact?.[0]}
         />
       </div>
 
-      {/* ─── Section 6: Recommendation (LaTeX) ─── */}
+      {/* ─── Section 6: Recommendation (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Recommendation
         </h3>
-        <LatexEditor
+        <MarkdownEditor
           label=""
           name="recommendation"
           defaultValue={val.recommendation}
           height="250px"
-          placeholder="Describe remediation steps in LaTeX..."
+          placeholder="Describe remediation steps in Markdown..."
           error={fieldErrors?.recommendation?.[0]}
         />
       </div>

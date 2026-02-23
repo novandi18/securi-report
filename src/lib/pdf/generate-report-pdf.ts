@@ -1,7 +1,8 @@
 import puppeteer from "puppeteer";
 import fs from "fs/promises";
 import path from "path";
-import { latexToHtml, escapeHtml } from "@/lib/latex-to-html";
+import { marked } from "marked";
+import { escapeHtml } from "@/lib/markdown-to-html";
 
 export interface ReportAttachmentPDF {
   fileName: string;
@@ -38,18 +39,8 @@ export async function generateReportPDF(report: ReportPDFData): Promise<string> 
   const delivDir = path.join(process.cwd(), "public", "deliverables");
   await fs.mkdir(delivDir, { recursive: true });
 
-  // Read KaTeX CSS for proper math rendering
-  const katexCssPath = path.join(
-    process.cwd(),
-    "node_modules",
-    "katex",
-    "dist",
-    "katex.min.css",
-  );
-  const katexCss = await fs.readFile(katexCssPath, "utf-8");
-
   // Build the HTML document
-  const html = buildReportHtml(report, katexCss);
+  const html = buildReportHtml(report);
 
   // Generate PDF via Puppeteer
   const fileName = `${(report.reportIdCustom || report.id).replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
@@ -89,7 +80,7 @@ export async function generateReportPDF(report: ReportPDFData): Promise<string> 
 
 // ─── HTML template ──────────────────────────────────────
 
-function buildReportHtml(report: ReportPDFData, katexCss: string): string {
+function buildReportHtml(report: ReportPDFData): string {
   const formatDate = (d: string | null) => {
     if (!d) return "—";
     return new Date(d).toLocaleDateString("en-GB", {
@@ -101,10 +92,11 @@ function buildReportHtml(report: ReportPDFData, katexCss: string): string {
 
   const renderSection = (title: string, content: string | null, num: number) => {
     if (!content?.trim()) return "";
+    const htmlContent = marked.parse(content, { async: false }) as string;
     return `
       <div class="section">
         <h2>${num}. ${escapeHtml(title)}</h2>
-        <div class="content">${latexToHtml(content)}</div>
+        <div class="content">${htmlContent}</div>
       </div>`;
   };
 
@@ -154,7 +146,6 @@ function buildReportHtml(report: ReportPDFData, katexCss: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <style>${katexCss}</style>
   <style>
     @page {
       margin: 20mm 15mm;
@@ -409,10 +400,6 @@ function buildReportHtml(report: ReportPDFData, katexCss: string): string {
       border-top: 1px solid #e2e8f0;
       margin: 16px 0;
     }
-
-    /* KaTeX overrides for PDF */
-    .katex { font-size: 1em; }
-    .katex-display { margin: 12px 0; }
 
     /* Proof of Concept */
     .poc-grid {

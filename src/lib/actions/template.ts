@@ -14,7 +14,7 @@ import {
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { syncDocument, removeDocument, INDEX } from "@/lib/meilisearch";
-import { sanitizeLatex, audit, checkDeleteRateLimit } from "@/lib/security";
+import { sanitizeMarkdown, audit, checkDeleteRateLimit } from "@/lib/security";
 
 export type ActionResult = {
   success: boolean;
@@ -197,9 +197,9 @@ export async function createTemplateAction(
       severity: parsed.data.severity,
       cvssScore: String(parsed.data.cvssScore),
       cvssVector: parsed.data.cvssVector,
-      description: sanitizeLatex(parsed.data.description ?? "") || null,
-      impact: sanitizeLatex(parsed.data.impact ?? "") || null,
-      recommendation: sanitizeLatex(parsed.data.recommendation ?? "") || null,
+      description: sanitizeMarkdown(parsed.data.description ?? "") || null,
+      impact: sanitizeMarkdown(parsed.data.impact ?? "") || null,
+      recommendation: sanitizeMarkdown(parsed.data.recommendation ?? "") || null,
       referencesLink: parsed.data.referencesLink,
       cweId: parsed.data.cweId ?? null,
       owaspId: parsed.data.owaspId ?? null,
@@ -285,9 +285,9 @@ export async function updateTemplateAction(
         severity: parsed.data.severity,
         cvssScore: String(parsed.data.cvssScore),
         cvssVector: parsed.data.cvssVector,
-        description: sanitizeLatex(parsed.data.description ?? "") || null,
-        impact: sanitizeLatex(parsed.data.impact ?? "") || null,
-        recommendation: sanitizeLatex(parsed.data.recommendation ?? "") || null,
+        description: sanitizeMarkdown(parsed.data.description ?? "") || null,
+        impact: sanitizeMarkdown(parsed.data.impact ?? "") || null,
+        recommendation: sanitizeMarkdown(parsed.data.recommendation ?? "") || null,
         referencesLink: parsed.data.referencesLink,
         cweId: parsed.data.cweId ?? null,
         owaspId: parsed.data.owaspId ?? null,

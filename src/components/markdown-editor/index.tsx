@@ -2,16 +2,16 @@
 
 import { useCallback, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { LatexPreview } from "./preview";
+import { MarkdownPreview } from "./preview";
 import Toolbar from "./toolbar";
 import { AISparkleButton } from "./ai-sparkle-button";
 import { AIShimmerBar } from "@/components/ui/ai-skeleton";
-import type { EditorState } from "@/lib/latex-helpers";
-import { wrapInlineCommand } from "@/lib/latex-helpers";
+import type { EditorState } from "@/lib/markdown-helpers";
+import { insertBold, insertItalic } from "@/lib/markdown-helpers";
 
 /* ─── Props ─────────────────────────────────────────── */
 
-interface LatexEditorProps {
+interface MarkdownEditorProps {
   label: string;
   name: string;
   defaultValue?: string;
@@ -31,16 +31,16 @@ const MAX_HEIGHT = 800;
 
 /* ─── Component ─────────────────────────────────────── */
 
-export function LatexEditor({
+export function MarkdownEditor({
   label,
   name,
   defaultValue = "",
   value: controlledValue,
   onChange,
   height = "300px",
-  placeholder = "Enter LaTeX content...",
+  placeholder = "Enter Markdown content...",
   error,
-}: LatexEditorProps) {
+}: MarkdownEditorProps) {
   // Support both controlled and uncontrolled usage
   const isControlled = controlledValue !== undefined;
   const [internalValue, setInternalValue] = useState(defaultValue);
@@ -115,13 +115,10 @@ export function LatexEditor({
 
       switch (e.key.toLowerCase()) {
         case "b":
-          result = wrapInlineCommand(state, "textbf");
+          result = insertBold(state);
           break;
         case "i":
-          result = wrapInlineCommand(state, "textit");
-          break;
-        case "u":
-          result = wrapInlineCommand(state, "underline");
+          result = insertItalic(state);
           break;
       }
 
@@ -303,12 +300,12 @@ export function LatexEditor({
               <div className="h-0.5 w-8 rounded-full bg-gray-400 dark:bg-slate-600" />
             </div>
           </div>
-          <LatexPreview content={currentValue} height={`${editorHeight}px`} />
+          <MarkdownPreview content={currentValue} height={`${editorHeight}px`} />
         </div>
       )}
 
       {tab === "preview" && (
-        <LatexPreview content={currentValue} height={`${editorHeight}px`} />
+        <MarkdownPreview content={currentValue} height={`${editorHeight}px`} />
       )}
 
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}

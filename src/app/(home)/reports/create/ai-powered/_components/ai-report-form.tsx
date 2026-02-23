@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   motion,
@@ -11,31 +11,30 @@ import {
   Sparkles,
   Wand2,
   FileText,
-  Shield,
   AlertTriangle,
   ArrowLeft,
-  ChevronRight,
   ClipboardPaste,
   Brain,
   ImageIcon,
   Building2,
-  Target,
+  Save,
+  Loader2,
 } from "lucide-react";
+import { marked } from "marked";
 import { cn } from "@/lib/utils";
 import { useRole } from "@/hooks/use-role";
+import { useToast } from "@/components/ui/toast";
 import { Select } from "@/components/FormElements/select";
 import InputGroup from "@/components/FormElements/InputGroup";
-import { LatexEditor } from "@/components/latex-editor";
 import { AIAttachmentZone, type PoCImage } from "@/components/FormElements/ai-attachment-zone";
 import { MagicButton } from "@/components/ui/magic-button";
-import { TypewriterText } from "@/components/ui/typewriter-text";
 import {
   AISkeleton,
   AIShimmerBar,
   AIErrorShake,
   AIWaveShimmer,
 } from "@/components/ui/ai-skeleton";
-import { generateReportWithAI } from "@/lib/actions/ai-generate";
+import { generateReportWithAI, saveAIReport } from "@/lib/actions/ai-generate";
 
 /* ─── Types ─────────────────────────────────────────── */
 
@@ -45,19 +44,52 @@ interface AIReportFormProps {
 
 type GenerationStep = "idle" | "generating" | "done" | "error";
 
-interface GeneratedContent {
-  executiveSummary: string;
-  impact: string;
-  recommendation: string;
-  scope: string;
-}
-
 /* ─── Helpers ───────────────────────────────────────── */
 
 function generatePenDocId(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   return `PEN-DOC-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}`;
+}
+
+/** Build a full styled HTML document for the report preview iframe (srcdoc). */
+function buildPreviewHtml(bodyHtml: string): string {
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1a1a2e;
+      padding: 24px 32px;
+    }
+    h1 { font-size: 18pt; color: #1a1a2e; margin-top: 28px; margin-bottom: 12px; border-bottom: 2px solid #5750F1; padding-bottom: 6px; }
+    h2 { font-size: 15pt; color: #1a1a2e; margin-top: 22px; margin-bottom: 10px; }
+    h3 { font-size: 13pt; color: #334155; margin-top: 18px; margin-bottom: 8px; }
+    h4 { font-size: 11pt; color: #475569; margin-top: 14px; margin-bottom: 6px; font-weight: 600; }
+    p { margin-bottom: 8px; text-align: justify; }
+    ul, ol { margin: 8px 0; padding-left: 24px; }
+    li { margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
+    th { background: #f8fafc; font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; color: #475569; }
+    td { padding: 8px 12px; border: 1px solid #e2e8f0; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-size: 9pt; margin: 8px 0; }
+    code:not(pre code) { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+    blockquote { border-left: 3px solid #5750F1; padding: 8px 16px; margin: 12px 0; color: #475569; background: #f8fafc; }
+    hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+    a { color: #5750F1; text-decoration: underline; }
+    img { max-width: 100%; height: auto; margin: 8px 0; border-radius: 4px; }
+    strong { font-weight: 700; }
+    em { font-style: italic; }
+    div[style*="page-break"] { margin: 24px 0; border-top: 2px dashed #e2e8f0; }
+  </style>
+</head>
+<body>${bodyHtml}</body>
+</html>`;
 }
 
 /* ─── Animation Variants ────────────────────────────── */
@@ -86,25 +118,27 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const router = useRouter();
   const prefersReduced = useReducedMotion();
   const { isAdmin } = useRole();
+  const { addToast } = useToast();
 
   /* ── State ── */
   const [step, setStep] = useState<GenerationStep>("idle");
   const [errorShake, setErrorShake] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [generated, setGenerated] = useState<GeneratedContent | null>(null);
-  const [revealIndex, setRevealIndex] = useState(0);
+  const [markdownReport, setMarkdownReport] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // Identity & Metadata
   const [title, setTitle] = useState("");
   const [reportId] = useState(generatePenDocId);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("Draft");
 
   // AI Raw Input
   const [rawFindings, setRawFindings] = useState("");
   const [aiContext, setAiContext] = useState("");
   const [pocImages, setPocImages] = useState<PoCImage[]>([]);
 
-  // Scope (LaTeX)
+  // Scope
   const [scopeValue, setScopeValue] = useState("");
 
   const customerOptions = customers.map((c) => ({
@@ -113,6 +147,13 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   }));
 
   const outputsRef = useRef<HTMLDivElement>(null);
+
+  /* ── Build styled HTML preview from markdown ── */
+  const previewHtml = useMemo(() => {
+    if (!markdownReport) return "";
+    const bodyHtml = marked.parse(markdownReport, { async: false }) as string;
+    return buildPreviewHtml(bodyHtml);
+  }, [markdownReport]);
 
   /* ── Validation ── */
   const isFormValid =
@@ -127,8 +168,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     if (!isFormValid) return;
 
     setStep("generating");
-    setGenerated(null);
-    setRevealIndex(0);
+    setMarkdownReport("");
     setErrorShake(false);
     setErrorMessage("");
 
@@ -138,18 +178,18 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
         customerName: selectedCustomerName,
         rawNotes: rawFindings,
         aiContext,
+        pocImages: pocImages.map((img) => ({
+          fileUrl: img.fileUrl,
+          fileName: img.fileName,
+          mimeType: img.mimeType,
+        })),
       });
 
       if (!result.success || !result.data) {
         throw new Error(result.error || "Unknown generation error.");
       }
 
-      setGenerated({
-        executiveSummary: result.data.executive_summary,
-        impact: result.data.impact,
-        recommendation: result.data.recommendation,
-        scope: scopeValue,
-      });
+      setMarkdownReport(result.data.markdownReport);
       setStep("done");
 
       // Scroll to outputs
@@ -167,12 +207,40 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
       setErrorShake(true);
       setTimeout(() => setErrorShake(false), 500);
     }
-  }, [isFormValid, title, selectedCustomerName, rawFindings, aiContext, scopeValue]);
+  }, [isFormValid, title, selectedCustomerName, rawFindings, aiContext, pocImages]);
 
-  /* ── Section reveal sequencing ── */
-  const handleSectionRevealed = useCallback(() => {
-    setRevealIndex((prev) => prev + 1);
-  }, []);
+  /* ── Save Report handler ── */
+  const handleSaveReport = useCallback(async () => {
+    if (!markdownReport || saving) return;
+
+    setSaving(true);
+    try {
+      const result = await saveAIReport({
+        title,
+        reportIdCustom: reportId,
+        customerId: selectedCustomerId,
+        status: selectedStatus,
+        markdownReport,
+        pocImages: pocImages.map((img) => ({
+          fileUrl: img.fileUrl,
+          fileName: img.fileName,
+          mimeType: img.mimeType,
+        })),
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to save report.");
+      }
+
+      addToast("Report saved successfully!", "success");
+      router.push(`/reports`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Save failed.";
+      addToast(msg, "error");
+    } finally {
+      setSaving(false);
+    }
+  }, [markdownReport, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, addToast, router]);
 
   /* ── Glass card helper ── */
   const glassCard = cn(
@@ -265,6 +333,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               label="Status"
               name="status"
               defaultValue="Draft"
+              onChange={setSelectedStatus}
               items={
                 isAdmin
                   ? [
@@ -281,13 +350,21 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
 
             {/* Scope */}
             <div>
-              <LatexEditor
-                label="Scope"
-                name="scope"
+              <label className="mb-1.5 block text-sm font-medium text-dark dark:text-white">
+                Scope
+              </label>
+              <textarea
                 value={scopeValue}
-                onChange={setScopeValue}
-                height="160px"
-                placeholder="Define targets and scope in LaTeX…"
+                onChange={(e) => setScopeValue(e.target.value)}
+                rows={4}
+                placeholder="Define targets and scope, e.g. https://app.example.com, 192.168.1.0/24"
+                className={cn(
+                  "w-full rounded-lg border border-stroke bg-transparent px-4 py-3 text-sm",
+                  "text-dark placeholder:text-dark-5/60",
+                  "dark:border-dark-3 dark:text-white dark:placeholder:text-dark-6/50",
+                  "outline-none focus:border-primary transition-colors",
+                  "resize-y",
+                )}
               />
             </div>
           </div>
@@ -470,15 +547,15 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                   <Sparkles size={16} className="text-purple-500" />
                 </motion.span>
                 <span className="text-sm font-medium text-dark dark:text-white">
-                  AI is analyzing your findings and crafting the report…
+                  AI is analyzing your findings{pocImages.length > 0 ? ` and ${pocImages.length} PoC image(s)` : ""} and crafting the report…
                 </span>
               </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-4">
                 {[
+                  "Title & Document Info",
                   "Executive Summary",
-                  "Impact Analysis",
-                  "Recommendations",
-                  "Scope",
+                  "Findings & Analysis",
+                  "Recommendations & Appendix",
                 ].map((label, i) => (
                   <div
                     key={label}
@@ -537,10 +614,10 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
       </AnimatePresence>
 
       {/* ════════════════════════════════════════════════
-           GENERATED OUTPUT — Typewriter Reveal
+           GENERATED OUTPUT — PDF Preview
          ════════════════════════════════════════════════ */}
       <AnimatePresence>
-        {step === "done" && generated && (
+        {step === "done" && markdownReport && (
           <motion.div
             ref={outputsRef}
             variants={outputRevealVariants}
@@ -553,62 +630,30 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent dark:via-purple-600/40" />
               <span className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400">
                 <Sparkles size={12} />
-                AI-Generated Output
+                AI-Generated Report
               </span>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent dark:via-purple-600/40" />
             </div>
 
-            {/* Bento output grid */}
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              {/* Executive Summary (full width) */}
-              <div className="lg:col-span-2">
-                <GeneratedOutputCard
-                  index={0}
-                  revealIndex={revealIndex}
-                  icon={<FileText size={16} />}
-                  title="Executive Summary"
-                  content={generated.executiveSummary}
-                  onRevealed={handleSectionRevealed}
-                  prefersReduced={!!prefersReduced}
-                  glassCard={glassCard}
-                />
+            {/* PDF Preview card */}
+            <div className={cn(glassCard)}>
+              {/* Toolbar */}
+              <div className="mb-4 flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                  <FileText size={16} />
+                </div>
+                <h3 className="text-base font-semibold text-dark dark:text-white">
+                  Generated VAPT Report — PDF Preview
+                </h3>
               </div>
 
-              {/* Impact */}
-              <GeneratedOutputCard
-                index={1}
-                revealIndex={revealIndex}
-                icon={<Shield size={16} />}
-                title="Impact Analysis"
-                content={generated.impact}
-                onRevealed={handleSectionRevealed}
-                prefersReduced={!!prefersReduced}
-                glassCard={glassCard}
-              />
-
-              {/* Recommendations */}
-              <GeneratedOutputCard
-                index={2}
-                revealIndex={revealIndex}
-                icon={<AlertTriangle size={16} />}
-                title="Recommendations"
-                content={generated.recommendation}
-                onRevealed={handleSectionRevealed}
-                prefersReduced={!!prefersReduced}
-                glassCard={glassCard}
-              />
-
-              {/* Scope (full width) */}
-              <div className="lg:col-span-2">
-                <GeneratedOutputCard
-                  index={3}
-                  revealIndex={revealIndex}
-                  icon={<Target size={16} />}
-                  title="Scope"
-                  content={generated.scope}
-                  onRevealed={handleSectionRevealed}
-                  prefersReduced={!!prefersReduced}
-                  glassCard={glassCard}
+              {/* Report Preview (rendered HTML) */}
+              <div className="overflow-hidden rounded-lg border border-stroke dark:border-dark-3">
+                <iframe
+                  srcDoc={previewHtml}
+                  title="AI Report Preview"
+                  className="h-[700px] w-full bg-white"
+                  sandbox="allow-same-origin"
                 />
               </div>
             </div>
@@ -616,11 +661,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
             {/* Action buttons */}
             <motion.div
               initial={prefersReduced ? false : { opacity: 0, y: 10 }}
-              animate={
-                revealIndex >= 4
-                  ? { opacity: 1, y: 0 }
-                  : { opacity: 0, y: 10 }
-              }
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.2 }}
               className="flex justify-end gap-3"
             >
@@ -628,7 +669,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                 type="button"
                 onClick={() => {
                   setStep("idle");
-                  setGenerated(null);
+                  setMarkdownReport("");
                 }}
                 className="rounded-lg border border-stroke px-6 py-2.5 text-sm font-medium text-dark transition-colors hover:bg-gray-2 dark:border-dark-3 dark:text-white dark:hover:bg-dark-3"
               >
@@ -636,11 +677,21 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               </button>
               <button
                 type="button"
-                onClick={() => router.push("/reports/create")}
-                className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                onClick={handleSaveReport}
+                disabled={saving}
+                className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
               >
-                Use in Report
-                <ChevronRight size={16} />
+                {saving ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    Save Report
+                  </>
+                )}
               </button>
             </motion.div>
           </motion.div>
@@ -686,85 +737,5 @@ function SectionHeader({
         </span>
       )}
     </div>
-  );
-}
-
-/* ─── Generated Output Card ─────────────────────────── */
-
-interface GeneratedOutputCardProps {
-  index: number;
-  revealIndex: number;
-  icon: React.ReactNode;
-  title: string;
-  content: string;
-  onRevealed: () => void;
-  prefersReduced: boolean;
-  glassCard: string;
-}
-
-function GeneratedOutputCard({
-  index,
-  revealIndex,
-  icon,
-  title,
-  content,
-  onRevealed,
-  prefersReduced,
-  glassCard,
-}: GeneratedOutputCardProps) {
-  const isActive = revealIndex >= index;
-  const isRevealing = revealIndex === index;
-
-  return (
-    <motion.div
-      custom={index}
-      variants={cardVariants}
-      initial={prefersReduced ? false : "hidden"}
-      animate={isActive ? "visible" : "hidden"}
-      whileHover={
-        prefersReduced
-          ? undefined
-          : { y: -4, transition: { duration: 0.2 } }
-      }
-      className={cn(
-        glassCard,
-        isRevealing &&
-          "border-purple-300/70 ring-1 ring-purple-200/40 dark:border-purple-500/40 dark:ring-purple-800/30",
-      )}
-    >
-      {/* Active shimmer */}
-      {isRevealing && <AIShimmerBar className="mb-3" />}
-
-      <div className="mb-3 flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-          {icon}
-        </div>
-        <h4 className="text-sm font-semibold text-dark dark:text-white">
-          {title}
-        </h4>
-        {isRevealing && (
-          <motion.span
-            animate={!prefersReduced ? { rotate: 360 } : undefined}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="ml-auto"
-          >
-            <Sparkles size={12} className="text-purple-400" />
-          </motion.span>
-        )}
-      </div>
-
-      {isActive && (
-        <div className="rounded-lg bg-slate-50/80 p-4 font-mono text-xs leading-relaxed text-dark dark:bg-slate-800/40 dark:text-slate-200">
-          <TypewriterText
-            text={content}
-            mode="word"
-            speed={25}
-            skipAnimation={prefersReduced || !isRevealing}
-            onComplete={isRevealing ? onRevealed : undefined}
-            showCursor={isRevealing}
-          />
-        </div>
-      )}
-    </motion.div>
   );
 }

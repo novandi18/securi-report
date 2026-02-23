@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
-import { LatexEditor } from "@/components/latex-editor";
-import { LatexPreview } from "@/components/latex-editor/preview";
+import { MarkdownEditor } from "@/components/markdown-editor";
+import { MarkdownPreview } from "@/components/markdown-editor/preview";
 import { mergeReportsAction } from "@/lib/actions/merge";
 import { cn } from "@/lib/utils";
 import {
@@ -555,7 +555,7 @@ export default function MergeClient({ groups }: MergeClientProps) {
                   </span>
                   <div className="mt-1 max-h-40 overflow-y-auto">
                     {masterExecSummary ? (
-                      <LatexPreview content={masterExecSummary} height="auto" />
+                      <MarkdownPreview content={masterExecSummary} height="auto" />
                     ) : (
                       <p className="text-xs text-dark-5 dark:text-dark-6">(empty)</p>
                     )}
@@ -567,7 +567,7 @@ export default function MergeClient({ groups }: MergeClientProps) {
                   </span>
                   <div className="mt-1 max-h-40 overflow-y-auto">
                     {masterScope ? (
-                      <LatexPreview content={masterScope} height="auto" />
+                      <MarkdownPreview content={masterScope} height="auto" />
                     ) : (
                       <p className="text-xs text-dark-5 dark:text-dark-6">(empty)</p>
                     )}
@@ -579,7 +579,7 @@ export default function MergeClient({ groups }: MergeClientProps) {
                   </span>
                   <div className="mt-1 max-h-40 overflow-y-auto">
                     {masterMethodology ? (
-                      <LatexPreview content={masterMethodology} height="auto" />
+                      <MarkdownPreview content={masterMethodology} height="auto" />
                     ) : (
                       <p className="text-xs text-dark-5 dark:text-dark-6">(empty)</p>
                     )}
@@ -594,7 +594,7 @@ export default function MergeClient({ groups }: MergeClientProps) {
                   </span>
                   <div className="mt-1 max-h-40 overflow-y-auto">
                     {masterImpact ? (
-                      <LatexPreview content={masterImpact} height="auto" />
+                      <MarkdownPreview content={masterImpact} height="auto" />
                     ) : (
                       <p className="text-xs text-dark-5 dark:text-dark-6">(empty)</p>
                     )}
@@ -606,7 +606,7 @@ export default function MergeClient({ groups }: MergeClientProps) {
                   </span>
                   <div className="mt-1 max-h-40 overflow-y-auto">
                     {masterRecommendation ? (
-                      <LatexPreview content={masterRecommendation} height="auto" />
+                      <MarkdownPreview content={masterRecommendation} height="auto" />
                     ) : (
                       <p className="text-xs text-dark-5 dark:text-dark-6">(empty)</p>
                     )}
@@ -726,7 +726,7 @@ function ConflictSection({
                 </div>
                 <div className="max-h-32 overflow-y-auto">
                   {value ? (
-                    <LatexPreview content={value} height="auto" />
+                    <MarkdownPreview content={value} height="auto" />
                   ) : (
                     <p className="text-xs text-dark-5 dark:text-dark-6">(empty)</p>
                   )}
@@ -736,7 +736,7 @@ function ConflictSection({
           })}
         </div>
       ) : (
-        <LatexEditor
+        <MarkdownEditor
           label=""
           name={`master_${field}`}
           value={currentValue}

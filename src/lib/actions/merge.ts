@@ -12,7 +12,7 @@ import { randomUUID } from "crypto";
 import { eq, and, isNull, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { syncDocument, INDEX } from "@/lib/meilisearch";
-import { sanitizeLatex, audit } from "@/lib/security";
+import { sanitizeMarkdown, audit } from "@/lib/security";
 
 export type MergeActionResult = {
   success: boolean;
@@ -186,7 +186,7 @@ export async function mergeReportsAction(input: {
     const pad = (n: number) => String(n).padStart(2, "0");
     const reportIdCustom = `PEN-MASTER-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}`;
 
-    // Create the master report (with LaTeX sanitization)
+    // Create the master report (with Markdown sanitization)
     const masterReportId = randomUUID();
     await db
       .insert(reports)
@@ -195,12 +195,12 @@ export async function mergeReportsAction(input: {
         customerId,
         reportIdCustom,
         title,
-        executiveSummary: sanitizeLatex(executiveSummary ?? "") || null,
-        scope: sanitizeLatex(scope ?? "") || null,
-        methodology: sanitizeLatex(methodology ?? "") || null,
+        executiveSummary: sanitizeMarkdown(executiveSummary ?? "") || null,
+        scope: sanitizeMarkdown(scope ?? "") || null,
+        methodology: sanitizeMarkdown(methodology ?? "") || null,
         cvssVector: cvssVector || null,
-        impact: sanitizeLatex(impact ?? "") || null,
-        recommendationSummary: sanitizeLatex(recommendationSummary ?? "") || null,
+        impact: sanitizeMarkdown(impact ?? "") || null,
+        recommendationSummary: sanitizeMarkdown(recommendationSummary ?? "") || null,
         referencesFramework: referencesFramework || null,
         isMaster: true,
         status: "Draft",

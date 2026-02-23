@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/toast";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { Select } from "@/components/FormElements/select";
-import { LatexEditor } from "@/components/latex-editor";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { CvssInput } from "@/components/FormElements/cvss-calculator";
 import { ReferencesInput } from "@/components/FormElements/references-input";
 import { AttachmentDropzone, type AttachmentFile } from "@/components/FormElements/attachment-dropzone";
@@ -217,7 +217,7 @@ export default function ReportForm({
                   Generate Sample Report Content
                 </p>
                 <p className="mt-0.5 text-xs text-amber-700/70 dark:text-amber-400/60">
-                  Auto-fill all fields with realistic pentest report data (LaTeX, CVSS, dates). No database write.
+                  Auto-fill all fields with realistic pentest report data (Markdown, CVSS, dates). No database write.
                 </p>
               </div>
               <button
@@ -287,17 +287,17 @@ export default function ReportForm({
         </div>
       </div>
 
-      {/* ─── Section 2: Scope (LaTeX) ─── */}
+      {/* ─── Section 2: Scope (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Scope
         </h3>
-        <LatexEditor
+        <MarkdownEditor
           label=""
           name="scope"
           defaultValue={val.scope}
           height="250px"
-          placeholder="Enter scope in LaTeX..."
+          placeholder="Enter scope in Markdown..."
           error={fieldErrors?.scope?.[0]}
         />
       </div>
@@ -346,47 +346,47 @@ export default function ReportForm({
         </div>
       </div>
 
-      {/* ─── Section 4: Executive Summary (LaTeX) ─── */}
+      {/* ─── Section 4: Executive Summary (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Executive Summary
         </h3>
-        <LatexEditor
+        <MarkdownEditor
           label=""
           name="executiveSummary"
           defaultValue={val.executiveSummary}
           height="250px"
-          placeholder="Enter executive summary in LaTeX..."
+          placeholder="Enter executive summary in Markdown..."
           error={fieldErrors?.executiveSummary?.[0]}
         />
       </div>
 
-      {/* ─── Section 5: Impact (LaTeX) ─── */}
+      {/* ─── Section 5: Impact (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Impact
         </h3>
-        <LatexEditor
+        <MarkdownEditor
           label=""
           name="impact"
           defaultValue={val.impact}
           height="250px"
-          placeholder="Enter impact analysis in LaTeX..."
+          placeholder="Enter impact analysis in Markdown..."
           error={fieldErrors?.impact?.[0]}
         />
       </div>
 
-      {/* ─── Section 6: Recommendation (LaTeX) ─── */}
+      {/* ─── Section 6: Recommendation (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Recommendation
         </h3>
-        <LatexEditor
+        <MarkdownEditor
           label=""
           name="recommendationSummary"
           defaultValue={val.recommendationSummary}
           height="250px"
-          placeholder="Enter recommendation summary in LaTeX..."
+          placeholder="Enter recommendation summary in Markdown..."
           error={fieldErrors?.recommendationSummary?.[0]}
         />
       </div>

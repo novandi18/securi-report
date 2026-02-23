@@ -15,7 +15,7 @@ import {
   rot13,
   decodeJWT,
   detectEncoding,
-  toLatexVerbatim,
+  toMarkdownCodeBlock,
   type DetectedEncoding,
 } from "@/lib/tools-utils";
 import {
@@ -121,14 +121,14 @@ export default function EncodingPage() {
     addToast("Copied to clipboard", "success");
   }, [encOutput, addToast]);
 
-  const handleCopyLatex = useCallback(() => {
+  const handleCopyMarkdown = useCallback(() => {
     if (!encOutput) {
       addToast("No output to copy", "warning");
       return;
     }
-    const latex = toLatexVerbatim(encOutput, `${algo.toUpperCase()} ${direction}`);
-    navigator.clipboard.writeText(latex);
-    addToast("LaTeX verbatim copied", "success");
+    const md = toMarkdownCodeBlock(encOutput, `${algo.toUpperCase()} ${direction}`);
+    navigator.clipboard.writeText(md);
+    addToast("Markdown code block copied", "success");
   }, [encOutput, algo, direction, addToast]);
 
   const handleDecodeJWT = useCallback(() => {
@@ -141,21 +141,24 @@ export default function EncodingPage() {
     addToast("JWT decoded", "success");
   }, [jwtInput, addToast]);
 
-  const handleCopyJwtLatex = useCallback(() => {
+  const handleCopyJwtMarkdown = useCallback(() => {
     if (!jwtResult) return;
     const content = [
-      "% JWT Header",
+      "## JWT Header",
+      "```json",
       JSON.stringify(jwtResult.header, null, 2),
+      "```",
       "",
-      "% JWT Payload",
+      "## JWT Payload",
+      "```json",
       JSON.stringify(jwtResult.payload, null, 2),
+      "```",
       "",
-      "% Signature",
-      jwtResult.signature,
+      "## Signature",
+      "`" + jwtResult.signature + "`",
     ].join("\n");
-    const latex = toLatexVerbatim(content, "JWT Token");
-    navigator.clipboard.writeText(latex);
-    addToast("LaTeX verbatim copied", "success");
+    navigator.clipboard.writeText(content);
+    addToast("Markdown copied", "success");
   }, [jwtResult, addToast]);
 
   const detectedBadge = useMemo(() => {
@@ -269,11 +272,11 @@ export default function EncodingPage() {
                 Swap
               </button>
               <button
-                onClick={handleCopyLatex}
+                onClick={handleCopyMarkdown}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
               >
                 <FileCode2 className="size-4" />
-                Copy to Report
+                Copy as Markdown
               </button>
             </div>
 
@@ -333,7 +336,7 @@ export default function EncodingPage() {
               </button>
               {jwtResult && (
                 <button
-                  onClick={handleCopyJwtLatex}
+                  onClick={handleCopyJwtMarkdown}
                   className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
                 >
                   <FileCode2 className="size-4" />

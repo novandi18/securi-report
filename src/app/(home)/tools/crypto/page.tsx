@@ -5,7 +5,7 @@ import { Breadcrumb } from "@/components/Breadcrumbs/Breadcrumb";
 import { useToast } from "@/components/ui/toast";
 import {
   hashAll,
-  hashTableToLatex,
+  hashTableToMarkdown,
   aesEncrypt,
   aesDecrypt,
   desEncrypt,
@@ -77,14 +77,14 @@ export default function CryptoPage() {
     [addToast],
   );
 
-  const handleCopyLatexTable = useCallback(() => {
+  const handleCopyMarkdownTable = useCallback(() => {
     if (!Object.keys(hashes).length) {
       addToast("Generate hashes first", "warning");
       return;
     }
-    const latex = hashTableToLatex(hashes, hashInput);
-    navigator.clipboard.writeText(latex);
-    addToast("LaTeX table copied to clipboard", "success");
+    const md = hashTableToMarkdown(hashes, hashInput);
+    navigator.clipboard.writeText(md);
+    addToast("Markdown table copied to clipboard", "success");
   }, [hashes, hashInput, addToast]);
 
   const handleCrypto = useCallback(async () => {
@@ -226,11 +226,11 @@ export default function CryptoPage() {
                 {hashLoading ? "Hashing..." : "Generate Hashes"}
               </button>
               <button
-                onClick={handleCopyLatexTable}
+                onClick={handleCopyMarkdownTable}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
               >
                 <FileCode2 className="size-4" />
-                Generate LaTeX Table
+                Copy as Markdown Table
               </button>
             </div>
 

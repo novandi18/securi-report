@@ -40,6 +40,7 @@ export type AuditAction =
   | "report.delete"
   | "report.merge"
   | "report.merged_closed"
+  | "report.ai_generate"
   // Customers
   | "customer.create"
   | "customer.update"

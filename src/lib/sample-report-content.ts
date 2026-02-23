@@ -18,115 +18,83 @@ export function generateSampleReportContent() {
   return {
     reportIdCustom: reportId,
     title: "Penetration Test Report — ACME Corp Web Application",
-    executiveSummary: `\\textbf{Executive Summary}
+    executiveSummary: `**Executive Summary**
 
-ACME Corp engaged our team to perform a comprehensive penetration test of their web application (\\texttt{https://app.acme-corp.com}) during the period ${auditStart.toISOString().slice(0, 10)} to ${auditEnd.toISOString().slice(0, 10)}.
+ACME Corp engaged our team to perform a comprehensive penetration test of their web application (\`https://app.acme-corp.com\`) during the period ${auditStart.toISOString().slice(0, 10)} to ${auditEnd.toISOString().slice(0, 10)}.
 
-\\textbf{Key Findings:}
-\\begin{enumerate}
-  \\item \\textbf{Critical (2):} SQL Injection, Remote Code Execution
-  \\item \\textbf{High (3):} Stored XSS, IDOR, Broken Authentication
-  \\item \\textbf{Medium (4):} CSRF, Missing Rate Limiting, Weak Crypto, Session Fixation
-  \\item \\textbf{Low (2):} Information Disclosure, Verbose Error Messages
-\\end{enumerate}
+**Key Findings:**
+1. **Critical (2):** SQL Injection, Remote Code Execution
+2. **High (3):** Stored XSS, IDOR, Broken Authentication
+3. **Medium (4):** CSRF, Missing Rate Limiting, Weak Crypto, Session Fixation
+4. **Low (2):** Information Disclosure, Verbose Error Messages
 
-\\textbf{Risk Score:}
-$$R_{total} = \\sum_{i=1}^{n} S_i \\cdot W_i = 2(9.8) + 3(7.5) + 4(5.5) + 2(3.0) = 70.1$$
+**Overall Rating:** The application presents a **HIGH** risk level. Immediate remediation of Critical and High findings is strongly recommended before the next production release.`,
 
-where $S_i$ is the CVSS score and $W_i$ is the count per severity level.
+    scope: `**Scope of Assessment**
 
-\\textbf{Overall Rating:} The application presents a \\textbf{HIGH} risk level. Immediate remediation of Critical and High findings is strongly recommended before the next production release.`,
+| Target | Description |
+| --- | --- |
+| \`app.acme-corp.com\` | Main web application (React + Node.js) |
+| \`api.acme-corp.com\` | REST API backend (Express.js) |
+| \`admin.acme-corp.com\` | Admin dashboard (Next.js) |
 
-    scope: `\\textbf{Scope of Assessment}
+**In Scope:**
+- Web application security testing (OWASP Top 10)
+- API endpoint security assessment
+- Authentication and authorization testing
+- Session management analysis
+- Input validation and output encoding
 
-\\begin{tabular}{|l|l|}
-\\hline
-\\textbf{Target} & \\textbf{Description} \\\\
-\\hline
-\\texttt{app.acme-corp.com} & Main web application (React + Node.js) \\\\
-\\texttt{api.acme-corp.com} & REST API backend (Express.js) \\\\
-\\texttt{admin.acme-corp.com} & Admin dashboard (Next.js) \\\\
-\\hline
-\\end{tabular}
+**Out of Scope:**
+- Physical security
+- Social engineering
+- Denial of Service (DoS) testing
+- Third-party integrations (Stripe, AWS)`,
 
-\\textbf{In Scope:}
-\\begin{itemize}
-  \\item Web application security testing (OWASP Top 10)
-  \\item API endpoint security assessment
-  \\item Authentication and authorization testing
-  \\item Session management analysis
-  \\item Input validation and output encoding
-\\end{itemize}
+    methodology: `**Methodology**
 
-\\textbf{Out of Scope:}
-\\begin{itemize}
-  \\item Physical security
-  \\item Social engineering
-  \\item Denial of Service (DoS) testing
-  \\item Third-party integrations (Stripe, AWS)
-\\end{itemize}`,
+The assessment followed the **OWASP Testing Guide v4.2** and **PTES (Penetration Testing Execution Standard)** frameworks.
 
-    methodology: `\\textbf{Methodology}
+**Phases:**
+1. **Reconnaissance:** Passive and active information gathering using \`nmap\`, \`subfinder\`, and \`httpx\`.
+2. **Mapping:** Application architecture analysis, endpoint enumeration, technology fingerprinting.
+3. **Discovery:** Automated scanning with \`Burp Suite Pro\`, \`Nuclei\`, and \`SQLMap\`. Manual testing for logic flaws.
+4. **Exploitation:** Proof-of-concept development for identified vulnerabilities.
+5. **Reporting:** Risk-based prioritization using CVSS 4.0 scoring model.
 
-The assessment followed the \\textbf{OWASP Testing Guide v4.2} and \\textbf{PTES (Penetration Testing Execution Standard)} frameworks.
+Coverage = 142 / 156 endpoints = **91.0%**`,
 
-\\textbf{Phases:}
-\\begin{enumerate}
-  \\item \\textbf{Reconnaissance:} Passive and active information gathering using \\texttt{nmap}, \\texttt{subfinder}, and \\texttt{httpx}.
-  \\item \\textbf{Mapping:} Application architecture analysis, endpoint enumeration, technology fingerprinting.
-  \\item \\textbf{Discovery:} Automated scanning with \\texttt{Burp Suite Pro}, \\texttt{Nuclei}, and \\texttt{SQLMap}. Manual testing for logic flaws.
-  \\item \\textbf{Exploitation:} Proof-of-concept development for identified vulnerabilities.
-  \\item \\textbf{Reporting:} Risk-based prioritization using CVSS 4.0 scoring model.
-\\end{enumerate}
-
-$$\\text{Coverage} = \\frac{|\\text{Endpoints Tested}|}{|\\text{Total Endpoints}|} = \\frac{142}{156} = 91.0\\%$$`,
-
-    impact: `\\textbf{Impact Analysis}
+    impact: `**Impact Analysis**
 
 The identified vulnerabilities pose significant risks across the CIA triad:
 
-\\begin{itemize}
-  \\item \\textbf{Confidentiality ($C$):} Critical — SQL Injection enables full database extraction. With $|records| > 50{,}000$, this constitutes a major data breach under GDPR Art. 33.
-  \\item \\textbf{Integrity ($I$):} High — XSS and IDOR allow unauthorized data modification. Trust score: $T = 1 - P(\\text{tamper}) \\approx 0.3$.
-  \\item \\textbf{Availability ($A$):} Medium — While DoS was out of scope, the RCE vulnerability could be leveraged for service disruption.
-\\end{itemize}
+- **Confidentiality (C):** Critical — SQL Injection enables full database extraction. With >50,000 records, this constitutes a major data breach under GDPR Art. 33.
+- **Integrity (I):** High — XSS and IDOR allow unauthorized data modification.
+- **Availability (A):** Medium — While DoS was out of scope, the RCE vulnerability could be leveraged for service disruption.
 
-\\textbf{Compliance Impact:}
-\\begin{enumerate}
-  \\item \\textbf{GDPR:} Potential fines up to $\\epsilon = 4\\%$ of annual turnover or \\EUR{20M}.
-  \\item \\textbf{PCI-DSS:} Non-compliant with Req. 6.5 (Secure Coding).
-  \\item \\textbf{SOC 2:} CC6.1 (Logical Access) control failure.
-\\end{enumerate}`,
+**Compliance Impact:**
+1. **GDPR:** Potential fines up to 4% of annual turnover or €20M.
+2. **PCI-DSS:** Non-compliant with Req. 6.5 (Secure Coding).
+3. **SOC 2:** CC6.1 (Logical Access) control failure.`,
 
-    recommendationSummary: `\\textbf{Recommendations Summary}
+    recommendationSummary: `**Recommendations Summary**
 
-\\textbf{Immediate (0-7 days):}
-\\begin{enumerate}
-  \\item Patch SQL Injection — deploy parameterized queries across all endpoints.
-  \\item Fix RCE — remove \\texttt{eval()} and \\texttt{child\\_process.exec()} with user input.
-  \\item Implement output encoding for all user-generated content.
-\\end{enumerate}
+**Immediate (0-7 days):**
+1. Patch SQL Injection — deploy parameterized queries across all endpoints.
+2. Fix RCE — remove \`eval()\` and \`child_process.exec()\` with user input.
+3. Implement output encoding for all user-generated content.
 
-\\textbf{Short-term (1-4 weeks):}
-\\begin{enumerate}
-  \\item Deploy Web Application Firewall (WAF) with OWASP CRS.
-  \\item Implement RBAC with row-level authorization checks.
-  \\item Add rate limiting: $r_{max} = 100$ requests/minute per IP.
-  \\item Enable MFA for all admin accounts.
-\\end{enumerate}
+**Short-term (1-4 weeks):**
+1. Deploy Web Application Firewall (WAF) with OWASP CRS.
+2. Implement RBAC with row-level authorization checks.
+3. Add rate limiting: max 100 requests/minute per IP.
+4. Enable MFA for all admin accounts.
 
-\\textbf{Long-term (1-3 months):}
-\\begin{enumerate}
-  \\item Establish SSDLC (Secure Software Development Lifecycle).
-  \\item Integrate SAST/DAST into CI/CD pipeline.
-  \\item Conduct security awareness training for development team.
-  \\item Schedule quarterly penetration tests: $f = 4$ per year.
-\\end{enumerate}
-
-\\textbf{Risk Reduction Projection:}
-$$R_{after} = R_{total} \\cdot (1 - \\eta) = 70.1 \\cdot 0.15 = 10.5$$
-
-where $\\eta = 0.85$ is the expected remediation effectiveness.`,
+**Long-term (1-3 months):**
+1. Establish SSDLC (Secure Software Development Lifecycle).
+2. Integrate SAST/DAST into CI/CD pipeline.
+3. Conduct security awareness training for development team.
+4. Schedule quarterly penetration tests (4 per year).`,
 
     referencesFramework: `OWASP Testing Guide v4.2\nPTES (Penetration Testing Execution Standard)\nNIST SP 800-115 (Technical Guide to Information Security Testing)\nCVSS v4.0 Specification (FIRST)\nMITRE ATT&CK Framework v14`,
 

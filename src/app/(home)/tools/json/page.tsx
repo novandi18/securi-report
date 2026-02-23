@@ -8,7 +8,7 @@ import {
   minifyJSON,
   validateJSON,
   getJSONPaths,
-  jsonToLatexListing,
+  jsonToMarkdownCodeBlock,
 } from "@/lib/tools-utils";
 import {
   Braces,
@@ -73,13 +73,13 @@ export default function JSONFormatterPage() {
     }
   }, [input, addToast]);
 
-  const handleCopyLatex = useCallback(() => {
+  const handleCopyMarkdown = useCallback(() => {
     try {
-      const latex = jsonToLatexListing(input);
-      navigator.clipboard.writeText(latex);
-      addToast("LaTeX listing copied to clipboard", "success");
+      const md = jsonToMarkdownCodeBlock(input);
+      navigator.clipboard.writeText(md);
+      addToast("Markdown code block copied to clipboard", "success");
     } catch {
-      addToast("Invalid JSON — cannot convert to LaTeX", "error");
+      addToast("Invalid JSON — cannot convert to Markdown", "error");
     }
   }, [input, addToast]);
 
@@ -126,11 +126,11 @@ export default function JSONFormatterPage() {
           Minify
         </button>
         <button
-          onClick={handleCopyLatex}
+          onClick={handleCopyMarkdown}
           className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
         >
           <FileCode2 className="size-4" />
-          Copy as LaTeX
+          Copy as Markdown
         </button>
         <button
           onClick={() => setShowPaths(!showPaths)}
