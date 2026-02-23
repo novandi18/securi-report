@@ -78,8 +78,6 @@ export const reports = mysqlTable("reports", {
   recommendationSummary: longtext("recommendation_summary"),
   auditDate: date("audit_date", { mode: "string" }),
   status: mysqlEnum("status", ["Open", "Closed", "Draft"]).default("Draft"),
-  isMaster: boolean("is_master").default(false),
-  parentReportId: char("parent_report_id", { length: 36 }),
   createdBy: char("created_by", { length: 36 }).references(() => users.id, {
     onDelete: "set null",
   }),
@@ -120,12 +118,6 @@ export const reportsRelations = relations(reports, ({ one, many }) => ({
   }),
   deliverables: many(deliverables),
   attachments: many(reportAttachments),
-  contributions: many(reports, { relationName: "contributions" }),
-  parentReport: one(reports, {
-    fields: [reports.parentReportId],
-    references: [reports.id],
-    relationName: "contributions",
-  }),
 }));
 
 // ─── Deliverables ─────────────────────────────────────────

@@ -23,8 +23,6 @@ export function useRole() {
     canAccessKB: role === "administrator" || role === "editor",
     /** Can access Tools (admin + editor) */
     canAccessTools: role === "administrator" || role === "editor",
-    /** Can merge reports into master (admin only) */
-    canMergeReports: role === "administrator",
     isAuthenticated: !!session?.user,
     user: session?.user,
   };

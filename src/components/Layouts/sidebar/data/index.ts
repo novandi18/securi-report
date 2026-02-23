@@ -52,7 +52,6 @@ export const NAV_DATA: NavSection[] = [
           { title: "All Reports", url: "/reports" },
           { title: "Add Report", url: "/reports/create" },
           { title: "Create with AI", url: "/reports/create-with-ai" },
-          { title: "Merge Reports", url: "/reports/merge", adminOnly: true },
           { title: "All Deliverables", url: "/reports/deliverables" },
         ],
       },

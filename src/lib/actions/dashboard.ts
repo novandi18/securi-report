@@ -14,7 +14,6 @@ export interface DashboardStats {
   criticalAlerts: number;
   averageCvss: number;
   draftCount: number;
-  masterCount: number;
   totalCustomers: number;
   severityDistribution: Record<SeverityLabel, number>;
   riskScoreTrend: { month: string; score: number }[];
@@ -63,7 +62,6 @@ export async function getDashboardStatsAction(customerId?: string) {
         title: reports.title,
         status: reports.status,
         cvssVector: reports.cvssVector,
-        isMaster: reports.isMaster,
         createdAt: reports.createdAt,
         updatedAt: reports.updatedAt,
         customerName: customers.name,
@@ -105,7 +103,6 @@ export async function getDashboardStatsAction(customerId?: string) {
           ) / 10
         : 0;
     const draftCount = enriched.filter((r) => r.status === "Draft").length;
-    const masterCount = enriched.filter((r) => r.isMaster).length;
 
     // ── Severity distribution ──
     const severityDistribution: Record<SeverityLabel, number> = {
@@ -223,7 +220,6 @@ export async function getDashboardStatsAction(customerId?: string) {
         criticalAlerts,
         averageCvss,
         draftCount,
-        masterCount,
         totalCustomers,
         severityDistribution,
         riskScoreTrend,

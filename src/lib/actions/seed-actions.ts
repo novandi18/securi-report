@@ -454,15 +454,14 @@ export async function seedReportsAction(): Promise<SeedResult> {
         : [session.user.id];
 
     let inserted = 0;
-    const masterIds: string[] = [];
 
-    // ── Historical Master Reports (spread over last 6 months) ──
+    // ── Historical Reports (spread over last 6 months) ──
     for (let i = 0; i < 8; i++) {
       const customer = pick(existingCustomers);
       const title = `${SAMPLE_REPORT_TITLES[i % SAMPLE_REPORT_TITLES.length]} — ${faker.company.buzzNoun()}`;
       const vector = pick(SAMPLE_CVSS_VECTORS);
-      const status = pick(["Open", "Closed", "Closed"] as const); // more closed for trends
-      const masterId = crypto.randomUUID();
+      const status = pick(["Open", "Closed", "Closed", "Draft"] as const);
+      const reportId = crypto.randomUUID();
 
       // Spread createdAt over last 6 months
       const monthsAgo = randomInt(0, 5);
@@ -478,61 +477,21 @@ export async function seedReportsAction(): Promise<SeedResult> {
       }
 
       await db.insert(reports).values({
-        id: masterId,
+        id: reportId,
         customerId: customer.id,
         reportIdCustom: `RPT-${faker.string.alphanumeric(6).toUpperCase()}`,
         title,
-        executiveSummary: `\\textbf{Executive Summary}\\\\This assessment identified several vulnerabilities in the ${faker.company.buzzNoun()} application. ${faker.lorem.paragraph()}`,
-        scope: `\\begin{itemize}\\item ${faker.internet.url()}\\item ${faker.internet.url()}\\item ${faker.internet.domainName()}\\end{itemize}`,
+        executiveSummary: `**Executive Summary**\n\nThis assessment identified several vulnerabilities in the ${faker.company.buzzNoun()} application. ${faker.lorem.paragraph()}`,
+        scope: `- ${faker.internet.url()}\n- ${faker.internet.url()}\n- ${faker.internet.domainName()}`,
         cvssVector: vector,
-        impact: `\\textbf{Overall Impact:} ${faker.lorem.paragraph()}`,
-        recommendationSummary: `\\begin{enumerate}\\item ${faker.hacker.phrase()}\\item ${faker.hacker.phrase()}\\item ${faker.hacker.phrase()}\\end{enumerate}`,
+        impact: `**Overall Impact:** ${faker.lorem.paragraph()}`,
+        recommendationSummary: `1. ${faker.hacker.phrase()}\n2. ${faker.hacker.phrase()}\n3. ${faker.hacker.phrase()}`,
         status,
-        isMaster: true,
         createdBy: pick(authorIds),
         createdAt,
         updatedAt,
       });
 
-      masterIds.push(masterId);
-      inserted++;
-    }
-
-    // ── Historical Draft Contributions (spread over last 6 months) ──
-    for (let i = 0; i < 15; i++) {
-      const customer = pick(existingCustomers);
-      const title = `${SAMPLE_REPORT_TITLES[(i + 5) % SAMPLE_REPORT_TITLES.length]} — ${faker.company.buzzNoun()}`;
-      const vector = pick(SAMPLE_CVSS_VECTORS);
-      const parentId = i < 6 && masterIds.length > 0 ? pick(masterIds) : null;
-      const status = pick(["Draft", "Open", "Open", "Closed"] as const);
-
-      const monthsAgo = randomInt(0, 5);
-      const dayOffset = randomInt(1, 28);
-      const createdAt = new Date();
-      createdAt.setMonth(createdAt.getMonth() - monthsAgo);
-      createdAt.setDate(dayOffset);
-
-      const updatedAt = new Date(createdAt);
-      if (status === "Closed") {
-        updatedAt.setDate(updatedAt.getDate() + randomInt(3, 25));
-      }
-
-      await db.insert(reports).values({
-        customerId: customer.id,
-        reportIdCustom: `DFT-${faker.string.alphanumeric(6).toUpperCase()}`,
-        title,
-        executiveSummary: `Draft contribution: ${faker.lorem.paragraph()}`,
-        scope: `\\begin{itemize}\\item ${faker.internet.url()}\\end{itemize}`,
-        cvssVector: vector,
-        impact: faker.lorem.paragraph(),
-        recommendationSummary: faker.lorem.paragraph(),
-        status,
-        isMaster: false,
-        parentReportId: parentId,
-        createdBy: pick(authorIds),
-        createdAt,
-        updatedAt,
-      });
       inserted++;
     }
 

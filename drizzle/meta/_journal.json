@@ -29,6 +29,13 @@
       "when": 1771427472391,
       "tag": "0003_aromatic_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1771862392061,
+      "tag": "0004_chemical_thor",
+      "breakpoints": true
     }
   ]
 }

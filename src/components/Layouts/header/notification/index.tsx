@@ -29,22 +29,6 @@ const TYPE_ICON: Record<string, { bg: string; icon: React.ReactNode }> = {
       </svg>
     ),
   },
-  contribution_submitted: {
-    bg: "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/>
-      </svg>
-    ),
-  },
-  report_merged: {
-    bg: "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/>
-      </svg>
-    ),
-  },
   report_released: {
     bg: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
     icon: (

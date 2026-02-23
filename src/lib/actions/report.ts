@@ -50,8 +50,6 @@ export async function getReportsAction() {
         status: reports.status,
         cvssVector: reports.cvssVector,
         auditDate: reports.auditDate,
-        isMaster: reports.isMaster,
-        parentReportId: reports.parentReportId,
         createdBy: reports.createdBy,
         createdAt: reports.createdAt,
         updatedAt: reports.updatedAt,
@@ -255,14 +253,14 @@ export async function createReportAction(
         const { createNotificationForRole } = await import("@/lib/actions/notification");
         await createNotificationForRole("administrator", {
           actorId: session.user.id,
-          category: "collaboration",
-          type: "contribution_submitted",
-          title: "New Contribution Submitted",
+          category: "engagement",
+          type: "customer_assigned",
+          title: "New Report Submitted",
           message: `${session.user.username} submitted "${parsed.data.title}" for review.`,
           actionUrl: created ? `/reports/${created.id}` : "/reports",
         });
       } catch (err) {
-        console.error("Failed to send contribution notification (non-blocking):", err);
+        console.error("Failed to send report notification (non-blocking):", err);
       }
     }
 
@@ -447,14 +445,14 @@ export async function updateReportAction(
         const { createNotificationForRole } = await import("@/lib/actions/notification");
         await createNotificationForRole("administrator", {
           actorId: session.user.id,
-          category: "collaboration",
-          type: "contribution_submitted",
-          title: "Contribution Submitted for Review",
+          category: "engagement",
+          type: "customer_assigned",
+          title: "Report Submitted for Review",
           message: `${session.user.username} submitted "${parsed.data.title}" for review.`,
           actionUrl: `/reports/${parsed.data.id}`,
         });
       } catch (err) {
-        console.error("Failed to send contribution notification (non-blocking):", err);
+        console.error("Failed to send report notification (non-blocking):", err);
       }
     }
 

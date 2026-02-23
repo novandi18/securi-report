@@ -585,8 +585,6 @@ function AuditLogSection({ logs }: { logs: AuditLog[] }) {
     "report.create": "Created report",
     "report.update": "Updated report",
     "report.delete": "Deleted report",
-    "report.merge": "Merged reports",
-    "report.merged_closed": "Report closed (merged)",
   };
 
   return (

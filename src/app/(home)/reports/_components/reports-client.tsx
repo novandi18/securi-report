@@ -33,8 +33,6 @@ export interface ReportRow {
   updatedAt: Date | null;
   customerName: string;
   creatorUsername: string | null;
-  isMaster: boolean | null;
-  parentReportId: string | null;
 }
 
 interface ReportsClientProps {
