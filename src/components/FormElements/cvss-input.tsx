@@ -2,14 +2,19 @@
 
 import { useId, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import {
+  calculateScoreFromVector,
+  getSeverityColor,
+  type SeverityLabel,
+} from "@/lib/cvss4";
 
 const CVSS_DEFAULT =
-  "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N";
+  "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N";
 
 interface CvssMetric {
   key: string;
   label: string;
-  options: { value: string; label: string; color?: string }[];
+  options: { value: string; label: string }[];
 }
 
 const METRICS: CvssMetric[] = [
@@ -128,6 +133,24 @@ function buildVector(values: Record<string, string>): string {
   return `CVSS:4.0/${parts.join("/")}`;
 }
 
+/* ─── Score Badge ───────────────────────────────── */
+
+function ScoreBadge({ score, severity }: { score: number; severity: SeverityLabel }) {
+  const colorClass = getSeverityColor(severity);
+  return (
+    <div className="flex items-center gap-2">
+      <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold", colorClass)}>
+        {score.toFixed(1)}
+      </div>
+      <div className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold", colorClass)}>
+        {severity}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Component ────────────────────────────── */
+
 interface CvssInputProps {
   name: string;
   defaultValue?: string;
@@ -144,6 +167,7 @@ export function CvssInput({ name, defaultValue, error }: CvssInputProps) {
   );
 
   const vectorString = useMemo(() => buildVector(values), [values]);
+  const result = useMemo(() => calculateScoreFromVector(vectorString), [vectorString]);
 
   function handleChange(key: string, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -161,18 +185,22 @@ export function CvssInput({ name, defaultValue, error }: CvssInputProps) {
       {/* Hidden input for form submission */}
       <input type="hidden" name={name} value={vectorString} />
 
-      {/* Vector string display */}
-      <div className="flex items-center gap-2">
-        <code className="flex-1 rounded-lg border border-stroke bg-gray-1 px-4 py-2.5 font-mono text-xs text-dark dark:border-dark-3 dark:bg-dark-2 dark:text-white">
-          {vectorString}
-        </code>
-        <button
-          type="button"
-          onClick={() => setExpanded((p) => !p)}
-          className="shrink-0 rounded-lg border border-stroke px-4 py-2.5 text-sm font-medium text-dark transition-colors hover:bg-gray-2 dark:border-dark-3 dark:text-white dark:hover:bg-dark-3"
-        >
-          {expanded ? "Collapse" : "Edit Metrics"}
-        </button>
+      {/* Score display & vector string */}
+      <div className="flex flex-col gap-3 rounded-lg border border-stroke bg-gray-1 p-3 dark:border-dark-3 dark:bg-dark-2 sm:flex-row sm:items-center sm:justify-between">
+        <ScoreBadge score={result.score} severity={result.severity} />
+
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <code className="rounded-md border border-stroke bg-white px-3 py-2 font-mono text-[10px] text-dark dark:border-dark-3 dark:bg-dark-3 dark:text-white sm:text-xs">
+            {vectorString}
+          </code>
+          <button
+            type="button"
+            onClick={() => setExpanded((p) => !p)}
+            className="shrink-0 rounded-lg border border-stroke px-4 py-2 text-sm font-medium text-dark transition-colors hover:bg-gray-2 dark:border-dark-3 dark:text-white dark:hover:bg-dark-3"
+          >
+            {expanded ? "Collapse" : "Edit Metrics"}
+          </button>
+        </div>
       </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
