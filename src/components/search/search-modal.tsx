@@ -105,6 +105,23 @@ function addRecentSearch(item: RecentItem) {
   }
 }
 
+function removeRecentSearch(href: string) {
+  try {
+    const updated = getRecentSearches().filter((r) => r.href !== href);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(updated));
+  } catch {
+    // ignore
+  }
+}
+
+function clearAllRecentSearches() {
+  try {
+    localStorage.removeItem(RECENT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function SearchModal({ open, onClose }: SearchModalProps) {
   const router = useRouter();
   const { isViewer } = useRole();
@@ -117,6 +134,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [recentSearches, setRecentSearches] = useState<RecentItem[]>([]);
+  const [visible, setVisible] = useState(false);
+  const [removing, setRemoving] = useState<Set<string>>(new Set());
 
   // ─── Flatten results for arrow navigation ───
   const flatItems = useMemo(() => {
@@ -138,13 +157,52 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   useEffect(() => {
     if (open) {
       setRecentSearches(getRecentSearches());
+      // Trigger enter animation
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setVisible(true));
+      });
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
+      setVisible(false);
       setQuery("");
       setResults([]);
       setActiveIndex(0);
     }
   }, [open]);
+
+  // ─── Close with exit animation ───
+  function handleClose() {
+    setVisible(false);
+    setTimeout(onClose, 200);
+  }
+
+  // ─── Delete single recent item ───
+  function handleRemoveRecent(e: React.MouseEvent, href: string) {
+    e.stopPropagation();
+    setRemoving((prev) => new Set(prev).add(href));
+    setTimeout(() => {
+      removeRecentSearch(href);
+      setRecentSearches(getRecentSearches());
+      setRemoving((prev) => {
+        const next = new Set(prev);
+        next.delete(href);
+        return next;
+      });
+      setActiveIndex(0);
+    }, 200);
+  }
+
+  // ─── Clear all recent searches ───
+  function handleClearAll() {
+    const allHrefs = recentSearches.map((r) => r.href);
+    setRemoving(new Set(allHrefs));
+    setTimeout(() => {
+      clearAllRecentSearches();
+      setRecentSearches([]);
+      setRemoving(new Set());
+      setActiveIndex(0);
+    }, 200);
+  }
 
   // ─── Multi-index search ───
   const search = useCallback(
@@ -267,7 +325,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
         navigateTo(recentSearches[activeIndex]);
       }
     } else if (e.key === "Escape") {
-      onClose();
+      handleClose();
     }
   }
 
@@ -290,12 +348,18 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
     <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[10vh]">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
+        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out ${
+          visible ? "opacity-100" : "opacity-0"
+        }`}
+        onClick={handleClose}
       />
 
       {/* Modal */}
-      <div className="relative z-10 mx-4 w-full max-w-xl overflow-hidden rounded-xl border border-stroke bg-white shadow-2xl dark:border-dark-3 dark:bg-dark-2">
+      <div className={`relative z-10 mx-4 w-full max-w-xl overflow-hidden rounded-xl border border-stroke bg-white shadow-2xl transition-all duration-200 ease-out dark:border-dark-3 dark:bg-dark-2 ${
+        visible
+          ? "translate-y-0 scale-100 opacity-100"
+          : "-translate-y-4 scale-95 opacity-0"
+      }`}>
         {/* Search input */}
         <div className="flex items-center gap-3 border-b border-stroke px-4 dark:border-dark-3">
           <svg
@@ -360,8 +424,12 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           {/* Results list */}
           {!loading && query.trim() && results.length > 0 && (
             <div className="py-2">
-              {results.map((cat) => (
-                <div key={cat.category}>
+              {results.map((cat, catIdx) => (
+                <div
+                  key={cat.category}
+                  className="animate-fade-slide-up"
+                  style={{ animationDelay: `${catIdx * 60}ms` }}
+                >
                   {/* Category header */}
                   <div className="flex items-center gap-2 px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-dark-5 dark:text-dark-6">
                     {cat.icon}
@@ -387,7 +455,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                           })
                         }
                         onMouseEnter={() => setActiveIndex(idx)}
-                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-all duration-150 ${
                           isActive
                             ? "bg-primary/10 text-primary dark:bg-primary/20"
                             : "text-dark hover:bg-gray-2 dark:text-white dark:hover:bg-dark-3"
@@ -418,7 +486,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
 
           {/* No results */}
           {!loading && query.trim() && results.length === 0 && (
-            <div className="py-10 text-center text-sm text-dark-5 dark:text-dark-6">
+            <div className="py-10 text-center text-sm text-dark-5 dark:text-dark-6 animate-fade-in">
               No results found for &ldquo;{query}&rdquo;
             </div>
           )}
@@ -428,45 +496,75 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
             <div className="py-2">
               {recentSearches.length > 0 ? (
                 <>
-                  <div className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-dark-5 dark:text-dark-6">
-                    Recent
+                  <div className="flex items-center justify-between px-4 pb-1 pt-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-dark-5 dark:text-dark-6">
+                      Recent
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleClearAll}
+                      className="rounded px-1.5 py-0.5 text-[11px] font-medium text-dark-5 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-dark-6 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                    >
+                      Clear all
+                    </button>
                   </div>
                   {recentSearches.map((item, i) => {
                     const isActive = i === activeIndex;
+                    const isRemoving = removing.has(item.href);
                     return (
-                      <button
+                      <div
                         key={item.href + i}
-                        data-index={i}
-                        type="button"
-                        onClick={() => navigateTo(item)}
-                        onMouseEnter={() => setActiveIndex(i)}
-                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
-                          isActive
-                            ? "bg-primary/10 text-primary dark:bg-primary/20"
-                            : "text-dark hover:bg-gray-2 dark:text-white dark:hover:bg-dark-3"
+                        className={`transition-all duration-200 ease-out ${
+                          isRemoving
+                            ? "max-h-0 opacity-0 -translate-x-4 overflow-hidden"
+                            : "max-h-20 opacity-100 translate-x-0"
                         }`}
                       >
-                        <svg className="shrink-0 text-dark-5 dark:text-dark-6" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10" />
-                          <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium">{item.title}</div>
-                          <div className="text-xs text-dark-5 dark:text-dark-6">
-                            {item.category}
+                        <button
+                          data-index={i}
+                          type="button"
+                          onClick={() => navigateTo(item)}
+                          onMouseEnter={() => setActiveIndex(i)}
+                          className={`group flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-all duration-150 ${
+                            isActive
+                              ? "bg-primary/10 text-primary dark:bg-primary/20"
+                              : "text-dark hover:bg-gray-2 dark:text-white dark:hover:bg-dark-3"
+                          }`}
+                        >
+                          <svg className="shrink-0 text-dark-5 dark:text-dark-6" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                          </svg>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-medium">{item.title}</div>
+                            <div className="text-xs text-dark-5 dark:text-dark-6">
+                              {item.category}
+                            </div>
                           </div>
-                        </div>
-                        {isActive && (
-                          <span className="shrink-0 text-dark-5 dark:text-dark-6">
-                            <ReturnIcon />
+                          <span
+                            role="button"
+                            tabIndex={-1}
+                            onClick={(e) => handleRemoveRecent(e, item.href)}
+                            className="shrink-0 rounded p-1 text-dark-5 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:text-dark-6 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                            title="Remove from recent"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
                           </span>
-                        )}
-                      </button>
+                          {isActive && !removing.has(item.href) && (
+                            <span className="shrink-0 text-dark-5 dark:text-dark-6">
+                              <ReturnIcon />
+                            </span>
+                          )}
+                        </button>
+                      </div>
                     );
                   })}
                 </>
               ) : (
-                <div className="py-10 text-center text-sm text-dark-5 dark:text-dark-6">
+                <div className="py-10 text-center text-sm text-dark-5 dark:text-dark-6 animate-fade-in">
                   Start typing to search…
                 </div>
               )}

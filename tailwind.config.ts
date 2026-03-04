@@ -356,6 +356,14 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(100%)" },
           "50%": { transform: "translateY(0)" },
         },
+        "fade-slide-up": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         linspin: "linspin 1568.2353ms linear infinite",
@@ -374,6 +382,8 @@ const config: Config = {
         line1: "line 10s infinite linear",
         line2: "line-revert 8s infinite linear",
         line3: "line 7s infinite linear",
+        "fade-slide-up": "fade-slide-up 200ms ease-out both",
+        "fade-in": "fade-in 200ms ease-out both",
       },
     },
   },
