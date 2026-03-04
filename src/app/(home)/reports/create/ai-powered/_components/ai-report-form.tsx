@@ -27,6 +27,8 @@ import { useToast } from "@/components/ui/toast";
 import { Select } from "@/components/FormElements/select";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { AIAttachmentZone, type PoCImage } from "@/components/FormElements/ai-attachment-zone";
+import { WorksheetUploader } from "@/components/FormElements/worksheet-uploader";
+import type { ParsedWorksheet } from "@/lib/actions/worksheet-actions";
 import { MagicButton } from "@/components/ui/magic-button";
 import {
   AISkeleton,
@@ -139,7 +141,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const [pocImages, setPocImages] = useState<PoCImage[]>([]);
 
   // Scope
-  const [scopeValue, setScopeValue] = useState("");
+  const [scopeData, setScopeData] = useState<ParsedWorksheet | null>(null);
 
   const customerOptions = customers.map((c) => ({
     value: c.id,
@@ -183,6 +185,9 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
           fileName: img.fileName,
           mimeType: img.mimeType,
         })),
+        scopeIssa1: scopeData?.issa1 ?? null,
+        scopeIssa2: scopeData?.issa2 ?? null,
+        scopeIssa3: scopeData?.issa3 ?? null,
       });
 
       if (!result.success || !result.data) {
@@ -207,7 +212,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
       setErrorShake(true);
       setTimeout(() => setErrorShake(false), 500);
     }
-  }, [isFormValid, title, selectedCustomerName, rawFindings, aiContext, pocImages]);
+  }, [isFormValid, title, selectedCustomerName, rawFindings, aiContext, pocImages, scopeData]);
 
   /* ── Save Report handler ── */
   const handleSaveReport = useCallback(async () => {
@@ -226,6 +231,9 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
           fileName: img.fileName,
           mimeType: img.mimeType,
         })),
+        scopeIssa1: scopeData?.issa1 ?? null,
+        scopeIssa2: scopeData?.issa2 ?? null,
+        scopeIssa3: scopeData?.issa3 ?? null,
       });
 
       if (!result.success) {
@@ -240,7 +248,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     } finally {
       setSaving(false);
     }
-  }, [markdownReport, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, addToast, router]);
+  }, [markdownReport, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, scopeData, addToast, router]);
 
   /* ── Glass card helper ── */
   const glassCard = cn(
@@ -348,23 +356,17 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               }
             />
 
-            {/* Scope */}
+            {/* Scope (Worksheet Upload) */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-dark dark:text-white">
                 Scope
               </label>
-              <textarea
-                value={scopeValue}
-                onChange={(e) => setScopeValue(e.target.value)}
-                rows={4}
-                placeholder="Define targets and scope, e.g. https://app.example.com, 192.168.1.0/24"
-                className={cn(
-                  "w-full rounded-lg border border-stroke bg-transparent px-4 py-3 text-sm",
-                  "text-dark placeholder:text-dark-5/60",
-                  "dark:border-dark-3 dark:text-white dark:placeholder:text-dark-6/50",
-                  "outline-none focus:border-primary transition-colors",
-                  "resize-y",
-                )}
+              <p className="mb-3 text-xs text-dark-5 dark:text-dark-6">
+                Upload ISSA Worksheet (.xlsx) to auto-parse scope targets.
+              </p>
+              <WorksheetUploader
+                initialData={null}
+                onChange={setScopeData}
               />
             </div>
           </div>

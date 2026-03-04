@@ -12,6 +12,7 @@ import { requireEditor, withAccessControl } from "@/lib/security";
 import { audit } from "@/lib/security/audit-logger";
 import { db } from "@/lib/db";
 import { reports, customers, deliverables, reportAttachments } from "@/lib/db/schema";
+import type { Issa1Target, Issa2Target, Issa3Target } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { syncDocument, INDEX } from "@/lib/meilisearch";
@@ -30,6 +31,9 @@ export interface GenerateReportInput {
   rawNotes: string;
   aiContext: string;
   pocImages?: PoCImageInput[];
+  scopeIssa1?: Issa1Target[] | null;
+  scopeIssa2?: Issa2Target[] | null;
+  scopeIssa3?: Issa3Target[] | null;
 }
 
 export interface GenerateReportResult {
@@ -199,6 +203,22 @@ export async function generateReportWithAI(
       ? `\n${imageCount} gambar PoC (Proof of Concept) dilampirkan. Analisis setiap gambar dan integrasikan temuan visual ke dalam laporan. Referensi setiap gambar dengan nama filenya.`
       : "";
 
+    // Build scope context from ISSA worksheet data
+    const scopeLines: string[] = [];
+    if (formData.scopeIssa1 && formData.scopeIssa1.length > 0) {
+      scopeLines.push("\nScope ISSA-1 (Exploitation Targets):");
+      formData.scopeIssa1.forEach((t) => scopeLines.push(`  ${t.no}. ${t.sistemEndpoint} \u2014 IP: ${t.ipAddress} \u2014 URL: ${t.linkUrl}`));
+    }
+    if (formData.scopeIssa2 && formData.scopeIssa2.length > 0) {
+      scopeLines.push("\nScope ISSA-2 (VA Public Targets):");
+      formData.scopeIssa2.forEach((t) => scopeLines.push(`  ${t.no}. IP Public: ${t.ipPublic} \u2014 URL: ${t.linkUrl}`));
+    }
+    if (formData.scopeIssa3 && formData.scopeIssa3.length > 0) {
+      scopeLines.push("\nScope ISSA-3 (VA Workstation Targets):");
+      formData.scopeIssa3.forEach((t) => scopeLines.push(`  ${t.no}. IP Internal: ${t.ipInternal}`));
+    }
+    const scopeNote = scopeLines.length > 0 ? `\n${scopeLines.join("\n")}` : "";
+
     const promptText = `Buatkan laporan VAPT Markdown lengkap berdasarkan data berikut:
 
 Judul Laporan: ${formData.title}
@@ -207,7 +227,7 @@ Tanggal: ${new Date().toLocaleDateString("id-ID", { year: "numeric", month: "lon
 ${contextLine}
 Data temuan mentah (raw findings):
 ${formData.rawNotes}
-${imageNote}
+${scopeNote}${imageNote}
 
 Aturan:
 - Output HARUS berupa Markdown mentah — JANGAN bungkus dalam code blocks tambahan.
@@ -305,6 +325,9 @@ export interface SaveAIReportInput {
   status: string;
   markdownReport: string;
   pocImages?: PoCImageInput[];
+  scopeIssa1?: Issa1Target[] | null;
+  scopeIssa2?: Issa2Target[] | null;
+  scopeIssa3?: Issa3Target[] | null;
 }
 
 export interface SaveAIReportResult {
@@ -364,6 +387,9 @@ export async function saveAIReport(
         executiveSummary: input.markdownReport,
         status: input.status as "Open" | "Closed" | "Draft",
         createdBy: user.id,
+        scopeIssa1: input.scopeIssa1 ?? undefined,
+        scopeIssa2: input.scopeIssa2 ?? undefined,
+        scopeIssa3: input.scopeIssa3 ?? undefined,
       });
 
       // Get the created report
