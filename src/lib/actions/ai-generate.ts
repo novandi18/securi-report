@@ -236,7 +236,7 @@ Aturan:
 - Untuk field yang datanya tidak tersedia, gunakan placeholder yang sesuai.`;
 
     /* ── Build content parts (text + images) ── */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line
     const parts: any[] = [{ text: promptText }];
 
     // Read and attach PoC images as inline base64 data

@@ -285,7 +285,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
         </div>
         <div className="flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 text-xs font-medium text-purple-600 dark:from-purple-500/20 dark:to-blue-500/20 dark:text-purple-400">
           <Sparkles size={14} />
-          Autopilot
+          Powered by Gemini 3
         </div>
       </motion.div>
 

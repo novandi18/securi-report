@@ -9,7 +9,7 @@ import { GoogleGenAI } from "@google/genai";
 import fs from "fs/promises";
 import path from "path";
 // Import the lib file directly to avoid pdf-parse's index.js which loads a test PDF at import time
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line
 const pdfParse = require("pdf-parse/lib/pdf-parse");
 
 /** Directory where uploaded template PDFs are saved */
