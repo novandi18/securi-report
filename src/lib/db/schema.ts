@@ -6,6 +6,7 @@ import {
   datetime,
   decimal,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   text,
@@ -58,6 +59,25 @@ export const customersRelations = relations(customers, ({ many }) => ({
   reports: many(reports),
 }));
 
+// ─── ISSA Worksheet Types ─────────────────────────────────
+export interface Issa1Target {
+  no: number;
+  sistemEndpoint: string;
+  ipAddress: string;
+  linkUrl: string;
+}
+
+export interface Issa2Target {
+  no: number;
+  ipPublic: string;
+  linkUrl: string;
+}
+
+export interface Issa3Target {
+  no: number;
+  ipInternal: string;
+}
+
 export const reports = mysqlTable("reports", {
   id: char("id", { length: 36 })
     .primaryKey()
@@ -68,7 +88,9 @@ export const reports = mysqlTable("reports", {
   reportIdCustom: varchar("report_id_custom", { length: 100 }).unique(),
   title: varchar("title", { length: 255 }).notNull(),
   executiveSummary: longtext("executive_summary"),
-  scope: longtext("scope"),
+  scopeIssa1: json("scope_issa_1").$type<Issa1Target[]>(),
+  scopeIssa2: json("scope_issa_2").$type<Issa2Target[]>(),
+  scopeIssa3: json("scope_issa_3").$type<Issa3Target[]>(),
   methodology: text("methodology"),
   referencesFramework: text("references_framework"),
   cvssVector: varchar("cvss_vector", { length: 150 }).default(

@@ -22,7 +22,9 @@ export const reportCreateSchema = z
       .min(1, "Title is required")
       .max(255, "Title must be at most 255 characters"),
     executiveSummary: emptyToNull,
-    scope: emptyToNull,
+    scopeIssa1: emptyToNull,
+    scopeIssa2: emptyToNull,
+    scopeIssa3: emptyToNull,
     methodology: emptyToNull,
     referencesFramework: emptyToNull,
     cvssVector: z
@@ -53,7 +55,9 @@ export const reportUpdateSchema = z
       .min(1, "Title is required")
       .max(255, "Title must be at most 255 characters"),
     executiveSummary: emptyToNull,
-    scope: emptyToNull,
+    scopeIssa1: emptyToNull,
+    scopeIssa2: emptyToNull,
+    scopeIssa3: emptyToNull,
     methodology: emptyToNull,
     referencesFramework: emptyToNull,
     cvssVector: z

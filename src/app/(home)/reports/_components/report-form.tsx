@@ -11,10 +11,13 @@ import { MarkdownEditor } from "@/components/markdown-editor";
 import { CvssInput } from "@/components/FormElements/cvss-calculator";
 import { ReferencesInput } from "@/components/FormElements/references-input";
 import { AttachmentDropzone, type AttachmentFile } from "@/components/FormElements/attachment-dropzone";
+import { WorksheetUploader } from "@/components/FormElements/worksheet-uploader";
 import { isDevClient } from "@/lib/env";
 import TemplatePickerModal from "./template-picker-modal";
 import type { PickableTemplate } from "./template-picker-modal";
 import type { ActionResult } from "@/lib/actions/report";
+import type { Issa1Target, Issa2Target, Issa3Target } from "@/lib/db/schema";
+import type { ParsedWorksheet } from "@/lib/actions/worksheet-actions";
 
 /**
  * Generate PEN-DOC-YYYYMMDDHHmm format report ID
@@ -31,7 +34,9 @@ export interface ReportFormData {
   reportIdCustom: string | null;
   title: string;
   executiveSummary: string | null;
-  scope: string | null;
+  scopeIssa1: Issa1Target[] | null;
+  scopeIssa2: Issa2Target[] | null;
+  scopeIssa3: Issa3Target[] | null;
   referencesFramework: string | null;
   cvssVector: string | null;
   impact: string | null;
@@ -119,7 +124,6 @@ export default function ReportForm({
         reportIdCustom: sample.reportIdCustom,
         title: sample.title,
         executiveSummary: sample.executiveSummary,
-        scope: sample.scope,
         methodology: sample.methodology,
         impact: sample.impact,
         recommendationSummary: sample.recommendationSummary,
@@ -154,7 +158,6 @@ export default function ReportForm({
     customerId: v?.customerId ?? report?.customerId ?? "",
     reportIdCustom: v?.reportIdCustom ?? t?.reportIdCustom ?? autoReportId,
     title: v?.title ?? t?.title ?? report?.title ?? "",
-    scope: v?.scope ?? t?.scope ?? report?.scope ?? "",
     referencesFramework: v?.referencesFramework ?? t?.referencesFramework ?? report?.referencesFramework ?? "",
     cvssVector: v?.cvssVector ?? t?.cvssVector ?? report?.cvssVector ?? "",
     status: v?.status ?? report?.status ?? "Draft",
@@ -162,6 +165,16 @@ export default function ReportForm({
     impact: v?.impact ?? t?.impact ?? report?.impact ?? "",
     recommendationSummary: v?.recommendationSummary ?? t?.recommendationSummary ?? report?.recommendationSummary ?? "",
   };
+
+  // Build initial worksheet data from report for edit mode
+  const initialWorksheetData: ParsedWorksheet | null =
+    report?.scopeIssa1 || report?.scopeIssa2 || report?.scopeIssa3
+      ? {
+          issa1: report.scopeIssa1 ?? [],
+          issa2: report.scopeIssa2 ?? [],
+          issa3: report.scopeIssa3 ?? [],
+        }
+      : null;
 
   // Key forces React to re-mount form inputs with updated defaultValue
   const formKey = state && !state.success
@@ -287,18 +300,17 @@ export default function ReportForm({
         </div>
       </div>
 
-      {/* ─── Section 2: Scope (Markdown) ─── */}
+      {/* ─── Section 2: Scope (Worksheet Upload) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
-        <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
+        <h3 className="mb-2 text-lg font-semibold text-dark dark:text-white">
           Scope
         </h3>
-        <MarkdownEditor
-          label=""
-          name="scope"
-          defaultValue={val.scope}
-          height="250px"
-          placeholder="Enter scope in Markdown..."
-          error={fieldErrors?.scope?.[0]}
+        <p className="mb-5 text-sm text-dark-5 dark:text-dark-6">
+          Upload the ISSA Worksheet (.xlsx) containing audit scope targets. The system will parse sheets ISSA-1, ISSA-2, and ISSA-3 automatically.
+        </p>
+        <WorksheetUploader
+          initialData={initialWorksheetData}
+          onChange={() => markDirty()}
         />
       </div>
 

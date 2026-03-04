@@ -482,7 +482,11 @@ export async function seedReportsAction(): Promise<SeedResult> {
         reportIdCustom: `RPT-${faker.string.alphanumeric(6).toUpperCase()}`,
         title,
         executiveSummary: `**Executive Summary**\n\nThis assessment identified several vulnerabilities in the ${faker.company.buzzNoun()} application. ${faker.lorem.paragraph()}`,
-        scope: `- ${faker.internet.url()}\n- ${faker.internet.url()}\n- ${faker.internet.domainName()}`,
+        scopeIssa1: [
+          { no: 1, sistemEndpoint: faker.internet.url(), ipAddress: faker.internet.ipv4(), linkUrl: faker.internet.url() },
+          { no: 2, sistemEndpoint: faker.internet.url(), ipAddress: faker.internet.ipv4(), linkUrl: faker.internet.url() },
+          { no: 3, sistemEndpoint: faker.internet.domainName(), ipAddress: faker.internet.ipv4(), linkUrl: faker.internet.url() },
+        ],
         cvssVector: vector,
         impact: `**Overall Impact:** ${faker.lorem.paragraph()}`,
         recommendationSummary: `1. ${faker.hacker.phrase()}\n2. ${faker.hacker.phrase()}\n3. ${faker.hacker.phrase()}`,

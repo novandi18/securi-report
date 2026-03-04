@@ -30,26 +30,17 @@ ACME Corp engaged our team to perform a comprehensive penetration test of their 
 
 **Overall Rating:** The application presents a **HIGH** risk level. Immediate remediation of Critical and High findings is strongly recommended before the next production release.`,
 
-    scope: `**Scope of Assessment**
-
-| Target | Description |
-| --- | --- |
-| \`app.acme-corp.com\` | Main web application (React + Node.js) |
-| \`api.acme-corp.com\` | REST API backend (Express.js) |
-| \`admin.acme-corp.com\` | Admin dashboard (Next.js) |
-
-**In Scope:**
-- Web application security testing (OWASP Top 10)
-- API endpoint security assessment
-- Authentication and authorization testing
-- Session management analysis
-- Input validation and output encoding
-
-**Out of Scope:**
-- Physical security
-- Social engineering
-- Denial of Service (DoS) testing
-- Third-party integrations (Stripe, AWS)`,
+    scopeIssa1: [
+      { no: 1, sistemEndpoint: "app.acme-corp.com", ipAddress: "192.168.1.10", linkUrl: "https://app.acme-corp.com" },
+      { no: 2, sistemEndpoint: "api.acme-corp.com", ipAddress: "192.168.1.11", linkUrl: "https://api.acme-corp.com" },
+      { no: 3, sistemEndpoint: "admin.acme-corp.com", ipAddress: "192.168.1.12", linkUrl: "https://admin.acme-corp.com" },
+    ],
+    scopeIssa2: [
+      { no: 1, ipPublic: "203.0.113.50", linkUrl: "https://db.acme-corp.com" },
+    ],
+    scopeIssa3: [
+      { no: 1, ipInternal: "10.0.0.5" },
+    ],
 
     methodology: `**Methodology**
 

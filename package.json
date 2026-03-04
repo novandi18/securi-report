@@ -52,6 +52,7 @@
     "react-apexcharts": "^1.7.0",
     "react-dom": "^19.2.0",
     "tailwind-merge": "^2.6.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

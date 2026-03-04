@@ -14,6 +14,19 @@ import { existsSync } from "fs";
 import { unlink } from "fs/promises";
 import path from "path";
 import { sanitizeMarkdown, audit, checkDeleteRateLimit } from "@/lib/security";
+import type { Issa1Target, Issa2Target, Issa3Target } from "@/lib/db/schema";
+
+/** Safely parse a JSON string from a hidden form field into a typed array, or return null. */
+function parseJsonField<T>(value: string | null | undefined): T[] | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed as T[];
+  } catch {
+    return null;
+  }
+}
 
 export type ActionResult = {
   success: boolean;
@@ -94,7 +107,9 @@ export async function getReportAction(id: string) {
         reportIdCustom: reports.reportIdCustom,
         title: reports.title,
         executiveSummary: reports.executiveSummary,
-        scope: reports.scope,
+        scopeIssa1: reports.scopeIssa1,
+        scopeIssa2: reports.scopeIssa2,
+        scopeIssa3: reports.scopeIssa3,
         methodology: reports.methodology,
         referencesFramework: reports.referencesFramework,
         cvssVector: reports.cvssVector,
@@ -163,7 +178,9 @@ export async function createReportAction(
     reportIdCustom: formData.get("reportIdCustom") as string,
     title: formData.get("title") as string,
     executiveSummary: formData.get("executiveSummary") as string,
-    scope: formData.get("scope") as string,
+    scopeIssa1: formData.get("scopeIssa1") as string,
+    scopeIssa2: formData.get("scopeIssa2") as string,
+    scopeIssa3: formData.get("scopeIssa3") as string,
     methodology: (formData.get("methodology") as string) ?? "",
     referencesFramework: formData.get("referencesFramework") as string,
     cvssVector: formData.get("cvssVector") as string,
@@ -215,7 +232,9 @@ export async function createReportAction(
       reportIdCustom,
       title: parsed.data.title,
       executiveSummary: sanitizeMarkdown(parsed.data.executiveSummary ?? "") || null,
-      scope: sanitizeMarkdown(parsed.data.scope ?? "") || null,
+      scopeIssa1: parseJsonField<Issa1Target>(parsed.data.scopeIssa1),
+      scopeIssa2: parseJsonField<Issa2Target>(parsed.data.scopeIssa2),
+      scopeIssa3: parseJsonField<Issa3Target>(parsed.data.scopeIssa3),
       methodology: sanitizeMarkdown(parsed.data.methodology ?? "") || null,
       referencesFramework: parsed.data.referencesFramework ?? null,
       cvssVector: parsed.data.cvssVector ?? null,
@@ -328,7 +347,9 @@ export async function updateReportAction(
     reportIdCustom: formData.get("reportIdCustom") as string,
     title: formData.get("title") as string,
     executiveSummary: formData.get("executiveSummary") as string,
-    scope: formData.get("scope") as string,
+    scopeIssa1: formData.get("scopeIssa1") as string,
+    scopeIssa2: formData.get("scopeIssa2") as string,
+    scopeIssa3: formData.get("scopeIssa3") as string,
     methodology: (formData.get("methodology") as string) ?? "",
     referencesFramework: formData.get("referencesFramework") as string,
     cvssVector: formData.get("cvssVector") as string,
@@ -407,7 +428,9 @@ export async function updateReportAction(
         reportIdCustom: parsed.data.reportIdCustom ?? null,
         title: parsed.data.title,
         executiveSummary: sanitizeMarkdown(parsed.data.executiveSummary ?? "") || null,
-        scope: sanitizeMarkdown(parsed.data.scope ?? "") || null,
+        scopeIssa1: parseJsonField<Issa1Target>(parsed.data.scopeIssa1),
+        scopeIssa2: parseJsonField<Issa2Target>(parsed.data.scopeIssa2),
+        scopeIssa3: parseJsonField<Issa3Target>(parsed.data.scopeIssa3),
         methodology: sanitizeMarkdown(parsed.data.methodology ?? "") || null,
         referencesFramework: parsed.data.referencesFramework ?? null,
         cvssVector: parsed.data.cvssVector ?? null,
@@ -558,7 +581,6 @@ export async function deleteReportAction(id: string): Promise<ActionResult> {
         status: reports.status,
         createdBy: reports.createdBy,
         executiveSummary: reports.executiveSummary,
-        scope: reports.scope,
         methodology: reports.methodology,
         impact: reports.impact,
         recommendationSummary: reports.recommendationSummary,
@@ -596,7 +618,6 @@ export async function deleteReportAction(id: string): Promise<ActionResult> {
     // ── Extract inline image URLs from Markdown content fields ──
     const contentFields = [
       existing.executiveSummary,
-      existing.scope,
       existing.methodology,
       existing.impact,
       existing.recommendationSummary,

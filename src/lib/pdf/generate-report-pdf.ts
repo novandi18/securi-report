@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { marked } from "marked";
 import { escapeHtml } from "@/lib/markdown-to-html";
+import type { Issa1Target, Issa2Target, Issa3Target } from "@/lib/db/schema";
 
 export interface ReportAttachmentPDF {
   fileName: string;
@@ -17,7 +18,9 @@ export interface ReportPDFData {
   title: string;
   customerName: string;
   executiveSummary: string | null;
-  scope: string | null;
+  scopeIssa1: Issa1Target[] | null;
+  scopeIssa2: Issa2Target[] | null;
+  scopeIssa3: Issa3Target[] | null;
   methodology: string | null;
   referencesFramework: string | null;
   cvssVector: string | null;
@@ -116,7 +119,65 @@ function buildReportHtml(report: ReportPDFData): string {
       </div>`;
   };
 
-  const severityFromCvss = (vector: string | null): { label: string; color: string; score: string } => {
+  const renderIssa1Table = (title: string, targets: Issa1Target[]) => {
+    if (targets.length === 0) return "";
+    return `
+      <h3 style="margin-top:16px;margin-bottom:8px;font-size:12pt;color:#1a1a2e">${escapeHtml(title)}</h3>
+      <table class="info-table" style="width:100%;margin-bottom:12px">
+        <thead>
+          <tr><th style="width:50px">No.</th><th>Sistem / Endpoint</th><th>IP Address</th><th>Link URL</th></tr>
+        </thead>
+        <tbody>
+          ${targets.map((t) => `<tr><td>${escapeHtml(String(t.no))}</td><td>${escapeHtml(t.sistemEndpoint)}</td><td>${escapeHtml(t.ipAddress)}</td><td>${escapeHtml(t.linkUrl)}</td></tr>`).join("")}
+        </tbody>
+      </table>`;
+  };
+
+  const renderIssa2Table = (title: string, targets: Issa2Target[]) => {
+    if (targets.length === 0) return "";
+    return `
+      <h3 style="margin-top:16px;margin-bottom:8px;font-size:12pt;color:#1a1a2e">${escapeHtml(title)}</h3>
+      <table class="info-table" style="width:100%;margin-bottom:12px">
+        <thead>
+          <tr><th style="width:50px">No.</th><th>IP Public</th><th>Link URL</th></tr>
+        </thead>
+        <tbody>
+          ${targets.map((t) => `<tr><td>${escapeHtml(String(t.no))}</td><td>${escapeHtml(t.ipPublic)}</td><td>${escapeHtml(t.linkUrl)}</td></tr>`).join("")}
+        </tbody>
+      </table>`;
+  };
+
+  const renderIssa3Table = (title: string, targets: Issa3Target[]) => {
+    if (targets.length === 0) return "";
+    return `
+      <h3 style="margin-top:16px;margin-bottom:8px;font-size:12pt;color:#1a1a2e">${escapeHtml(title)}</h3>
+      <table class="info-table" style="width:100%;margin-bottom:12px">
+        <thead>
+          <tr><th style="width:50px">No.</th><th>IP Internal</th></tr>
+        </thead>
+        <tbody>
+          ${targets.map((t) => `<tr><td>${escapeHtml(String(t.no))}</td><td>${escapeHtml(t.ipInternal)}</td></tr>`).join("")}
+        </tbody>
+      </table>`;
+  };
+
+  const renderScopeSection = (r: ReportPDFData, num: number) => {
+    const issa1 = r.scopeIssa1 ?? [];
+    const issa2 = r.scopeIssa2 ?? [];
+    const issa3 = r.scopeIssa3 ?? [];
+    if (issa1.length === 0 && issa2.length === 0 && issa3.length === 0) return "";
+    return `
+      <div class="section">
+        <h2>${num}. Scope</h2>
+        <div class="content">
+          ${renderIssa1Table("BAB IV — ISSA-1 Targets", issa1)}
+          ${renderIssa2Table("BAB V — ISSA-2 Targets", issa2)}
+          ${renderIssa3Table("BAB V — ISSA-3 Targets", issa3)}
+        </div>
+      </div>`;
+  };
+
+  const severityFromCvss = (vector?: string | null) => {
     if (!vector) return { label: "None", color: "#6b7280", score: "0.0" };
     // Simple CVSS 4.0 scoring approximation based on vector metrics
     const metrics = Object.fromEntries(
@@ -505,7 +566,7 @@ function buildReportHtml(report: ReportPDFData): string {
 
   <!-- Content Sections -->
   ${renderSection("Executive Summary", report.executiveSummary, 1)}
-  ${renderSection("Scope", report.scope, 2)}
+  ${renderScopeSection(report, 2)}
   ${renderSection("Methodology", report.methodology, 3)}
   ${renderSection("Impact Analysis", report.impact, 4)}
   ${renderSection("Recommendations", report.recommendationSummary, 5)}

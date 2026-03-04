@@ -36,6 +36,13 @@
       "when": 1771862392061,
       "tag": "0004_chemical_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1772870400000,
+      "tag": "0005_scope_issa_json",
+      "breakpoints": true
     }
   ]
 }
