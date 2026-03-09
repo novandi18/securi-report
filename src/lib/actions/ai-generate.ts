@@ -384,7 +384,7 @@ export async function saveAIReport(
         customerId: input.customerId,
         reportIdCustom,
         title: input.title,
-        executiveSummary: input.markdownReport,
+        description: input.markdownReport,
         status: input.status as "Open" | "Closed" | "Draft",
         createdBy: user.id,
         scopeIssa1: input.scopeIssa1 ?? undefined,
@@ -400,7 +400,7 @@ export async function saveAIReport(
           reportIdCustom: reports.reportIdCustom,
           customerName: customers.name,
           status: reports.status,
-          executiveSummary: reports.executiveSummary,
+          description: reports.description,
           auditDate: reports.auditDate,
         })
         .from(reports)

@@ -3,7 +3,6 @@ import fs from "fs/promises";
 import path from "path";
 import { marked } from "marked";
 import { escapeHtml } from "@/lib/markdown-to-html";
-import type { Issa1Target, Issa2Target, Issa3Target } from "@/lib/db/schema";
 
 export interface ReportAttachmentPDF {
   fileName: string;
@@ -17,16 +16,16 @@ export interface ReportPDFData {
   reportIdCustom: string | null;
   title: string;
   customerName: string;
-  executiveSummary: string | null;
-  scopeIssa1: Issa1Target[] | null;
-  scopeIssa2: Issa2Target[] | null;
-  scopeIssa3: Issa3Target[] | null;
-  methodology: string | null;
-  referencesFramework: string | null;
+  issueReferenceNumber: string | null;
+  severity: string | null;
+  location: string | null;
+  description: string | null;
+  pocText: string | null;
+  referencesList: string | null;
   cvssVector: string | null;
+  cvssScore: string | null;
   impact: string | null;
-  recommendationSummary: string | null;
-  auditDate: string | null;
+  recommendation: string | null;
   status: string | null;
   createdAt: Date | null;
   attachments?: ReportAttachmentPDF[];
@@ -81,496 +80,151 @@ export async function generateReportPDF(report: ReportPDFData): Promise<string> 
   return `/deliverables/${fileName}`;
 }
 
-// ─── HTML template ──────────────────────────────────────
+// ─── HTML template for Single Finding Report ──────────────
 
 function buildReportHtml(report: ReportPDFData): string {
-  const formatDate = (d: string | null) => {
-    if (!d) return "—";
-    return new Date(d).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
-  const renderSection = (title: string, content: string | null, num: number) => {
+  const renderMarkdown = (content: string | null) => {
     if (!content?.trim()) return "";
-    const htmlContent = marked.parse(content, { async: false }) as string;
-    return `
-      <div class="section">
-        <h2>${num}. ${escapeHtml(title)}</h2>
-        <div class="content">${htmlContent}</div>
-      </div>`;
+    return marked.parse(content, { async: false }) as string;
   };
 
-  const renderProofOfConcept = (attachments: ReportAttachmentPDF[], num: number) => {
-    if (attachments.length === 0) return "";
-    return `
-      <div class="section" style="page-break-before: always;">
-        <h2>${num}. Proof of Concept</h2>
-        <div class="poc-grid">
-          ${attachments.map((a, i) => `
-            <div class="poc-item">
-              <img src="${a.dataUri}" alt="Figure ${i + 1}" />
-              <div class="poc-caption">Figure ${i + 1}</div>
-            </div>
-          `).join("")}
-        </div>
-      </div>`;
-  };
+  const severityLabel = (report.severity ?? "Info").toUpperCase();
+  const cvssScore = report.cvssScore ?? "—";
+  const statusLabel = report.status ?? "Open";
 
-  const renderIssa1Table = (title: string, targets: Issa1Target[]) => {
-    if (targets.length === 0) return "";
-    return `
-      <h3 style="margin-top:16px;margin-bottom:8px;font-size:12pt;color:#1a1a2e">${escapeHtml(title)}</h3>
-      <table class="info-table" style="width:100%;margin-bottom:12px">
-        <thead>
-          <tr><th style="width:50px">No.</th><th>Sistem / Endpoint</th><th>IP Address</th><th>Link URL</th></tr>
-        </thead>
-        <tbody>
-          ${targets.map((t) => `<tr><td>${escapeHtml(String(t.no))}</td><td>${escapeHtml(t.sistemEndpoint)}</td><td>${escapeHtml(t.ipAddress)}</td><td>${escapeHtml(t.linkUrl)}</td></tr>`).join("")}
-        </tbody>
-      </table>`;
-  };
-
-  const renderIssa2Table = (title: string, targets: Issa2Target[]) => {
-    if (targets.length === 0) return "";
-    return `
-      <h3 style="margin-top:16px;margin-bottom:8px;font-size:12pt;color:#1a1a2e">${escapeHtml(title)}</h3>
-      <table class="info-table" style="width:100%;margin-bottom:12px">
-        <thead>
-          <tr><th style="width:50px">No.</th><th>IP Public</th><th>Link URL</th></tr>
-        </thead>
-        <tbody>
-          ${targets.map((t) => `<tr><td>${escapeHtml(String(t.no))}</td><td>${escapeHtml(t.ipPublic)}</td><td>${escapeHtml(t.linkUrl)}</td></tr>`).join("")}
-        </tbody>
-      </table>`;
-  };
-
-  const renderIssa3Table = (title: string, targets: Issa3Target[]) => {
-    if (targets.length === 0) return "";
-    return `
-      <h3 style="margin-top:16px;margin-bottom:8px;font-size:12pt;color:#1a1a2e">${escapeHtml(title)}</h3>
-      <table class="info-table" style="width:100%;margin-bottom:12px">
-        <thead>
-          <tr><th style="width:50px">No.</th><th>IP Internal</th></tr>
-        </thead>
-        <tbody>
-          ${targets.map((t) => `<tr><td>${escapeHtml(String(t.no))}</td><td>${escapeHtml(t.ipInternal)}</td></tr>`).join("")}
-        </tbody>
-      </table>`;
-  };
-
-  const renderScopeSection = (r: ReportPDFData, num: number) => {
-    const issa1 = r.scopeIssa1 ?? [];
-    const issa2 = r.scopeIssa2 ?? [];
-    const issa3 = r.scopeIssa3 ?? [];
-    if (issa1.length === 0 && issa2.length === 0 && issa3.length === 0) return "";
-    return `
-      <div class="section">
-        <h2>${num}. Scope</h2>
-        <div class="content">
-          ${renderIssa1Table("BAB IV — ISSA-1 Targets", issa1)}
-          ${renderIssa2Table("BAB V — ISSA-2 Targets", issa2)}
-          ${renderIssa3Table("BAB V — ISSA-3 Targets", issa3)}
-        </div>
-      </div>`;
-  };
-
-  const severityFromCvss = (vector?: string | null) => {
-    if (!vector) return { label: "None", color: "#6b7280", score: "0.0" };
-    // Simple CVSS 4.0 scoring approximation based on vector metrics
-    const metrics = Object.fromEntries(
-      vector
-        .replace("CVSS:4.0/", "")
-        .split("/")
-        .map((p) => p.split(":"))
-        .filter((p) => p.length === 2),
-    );
-    const highCount = Object.values(metrics).filter((v) => v === "H").length;
-    const noneCount = Object.values(metrics).filter((v) => v === "N").length;
-
-    if (highCount >= 6) return { label: "Critical", color: "#dc2626", score: "9.0+" };
-    if (highCount >= 4) return { label: "High", color: "#ef4444", score: "7.0-8.9" };
-    if (highCount >= 2) return { label: "Medium", color: "#f97316", score: "4.0-6.9" };
-    if (noneCount >= 8) return { label: "None", color: "#6b7280", score: "0.0" };
-    return { label: "Low", color: "#eab308", score: "1.0-3.9" };
-  };
-
-  const severity = severityFromCvss(report.cvssVector);
-
-  const referenceTags = report.referencesFramework
-    ? report.referencesFramework.split(",").map((r) => r.trim()).filter(Boolean)
-    : [];
+  // Build PoC images
+  const pocImages = (report.attachments ?? [])
+    .map(
+      (a, i) => `
+      <div class="poc-item">
+        <img src="${a.dataUri}" alt="Figure ${i + 1}: ${escapeHtml(a.fileName)}" />
+        <div class="poc-caption"><em>Figure ${i + 1}: ${escapeHtml(a.fileName)}</em></div>
+      </div>`,
+    )
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <style>
-    @page {
-      margin: 20mm 15mm;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    @page { margin: 20mm 15mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       font-size: 11pt;
       line-height: 1.6;
       color: #1a1a2e;
+      padding: 0;
     }
 
-    /* Cover Page */
-    .cover {
-      page-break-after: always;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-height: 85vh;
-      text-align: center;
-    }
+    h1 { font-size: 20pt; color: #1a1a2e; margin-bottom: 16px; border-bottom: 3px solid #5750F1; padding-bottom: 8px; }
+    h2 { font-size: 15pt; color: #1a1a2e; margin-top: 28px; margin-bottom: 12px; border-bottom: 2px solid #5750F1; padding-bottom: 6px; }
+    h3 { font-size: 13pt; color: #334155; margin-top: 18px; margin-bottom: 8px; }
+    p { margin-bottom: 8px; text-align: justify; }
+    ul, ol { margin: 8px 0; padding-left: 24px; }
+    li { margin-bottom: 4px; }
 
-    .cover-badge {
-      display: inline-block;
-      background: #eff0fe;
-      color: #5750F1;
-      font-size: 10pt;
-      font-weight: 600;
-      padding: 6px 16px;
-      border-radius: 20px;
-      margin-bottom: 24px;
-      letter-spacing: 0.5px;
+    /* Finding Info Table */
+    .finding-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    .finding-table th {
+      text-align: left; background: #f8fafc; font-size: 10pt; font-weight: 700;
+      padding: 10px 14px; border: 1px solid #e2e8f0; width: 220px; color: #1a1a2e;
     }
-
-    .cover h1 {
-      font-size: 28pt;
-      font-weight: 700;
-      color: #1a1a2e;
-      margin-bottom: 12px;
-      max-width: 600px;
-    }
-
-    .cover .subtitle {
-      font-size: 14pt;
-      color: #64748b;
-      margin-bottom: 40px;
-    }
-
-    .cover-meta {
-      border-top: 2px solid #e2e8f0;
-      padding-top: 24px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      text-align: left;
-      width: 400px;
-    }
-
-    .cover-meta dt {
-      font-size: 9pt;
-      font-weight: 600;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .cover-meta dd {
-      font-size: 11pt;
-      color: #1a1a2e;
-      margin-bottom: 8px;
-    }
-
-    .cover .confidential {
-      margin-top: 48px;
-      font-size: 10pt;
-      font-weight: 600;
-      color: #dc2626;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border: 2px solid #dc2626;
-      padding: 8px 24px;
-      border-radius: 4px;
-    }
-
-    /* Overview Table */
-    .overview {
-      page-break-after: always;
-    }
-
-    .overview h2 {
-      font-size: 18pt;
-      color: #1a1a2e;
-      border-bottom: 3px solid #5750F1;
-      padding-bottom: 8px;
-      margin-bottom: 24px;
-    }
-
-    .overview-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 24px;
-    }
-
-    .overview-table th {
-      text-align: left;
-      background: #f8fafc;
-      font-size: 9pt;
-      font-weight: 600;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 12px 16px;
-      border-bottom: 2px solid #e2e8f0;
-      width: 160px;
-    }
-
-    .overview-table td {
-      padding: 12px 16px;
-      border-bottom: 1px solid #f1f5f9;
-      color: #1a1a2e;
+    .finding-table td {
+      padding: 10px 14px; border: 1px solid #e2e8f0; font-size: 10pt;
     }
 
     .severity-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 10pt;
-      font-weight: 600;
-      color: white;
+      display: inline-block; padding: 3px 12px; border-radius: 12px;
+      font-size: 10pt; font-weight: 600; color: white;
     }
+    .severity-critical { background: #dc2626; }
+    .severity-high { background: #ef4444; }
+    .severity-medium { background: #f97316; }
+    .severity-low { background: #eab308; }
+    .severity-info { background: #6b7280; }
 
-    .ref-tag {
-      display: inline-block;
-      background: #eff0fe;
-      color: #5750F1;
-      font-size: 9pt;
-      font-weight: 500;
-      padding: 3px 10px;
-      border-radius: 12px;
-      margin: 2px 4px 2px 0;
-    }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 10pt; font-family: 'Menlo', monospace; }
+    pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 10pt; margin: 12px 0; }
+    pre code { background: none; padding: 0; color: inherit; }
+    blockquote { border-left: 3px solid #5750F1; padding-left: 16px; margin: 12px 0; color: #475569; }
+    a { color: #5750F1; text-decoration: underline; }
 
-    /* Sections */
-    .section {
-      margin-bottom: 32px;
-    }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
+    th { background: #f8fafc; font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; }
+    td { padding: 8px 12px; border: 1px solid #e2e8f0; }
 
-    .section h2 {
-      font-size: 16pt;
-      color: #1a1a2e;
-      border-bottom: 2px solid #5750F1;
-      padding-bottom: 6px;
-      margin-bottom: 16px;
-    }
+    .section { margin-bottom: 24px; }
+    .section .content { line-height: 1.7; }
 
-    .section .content {
-      line-height: 1.7;
-    }
+    .poc-item { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 16px 0; page-break-inside: avoid; }
+    .poc-item img { width: 100%; max-height: 500px; object-fit: contain; display: block; background: #f8fafc; }
+    .poc-caption { padding: 8px 12px; font-size: 9pt; color: #64748b; background: #f8fafc; border-top: 1px solid #e2e8f0; }
 
-    .section .content h3 {
-      font-size: 13pt;
-      color: #334155;
-      margin-top: 16px;
-      margin-bottom: 8px;
-    }
-
-    .section .content h4 {
-      font-size: 12pt;
-      color: #475569;
-      margin-top: 12px;
-      margin-bottom: 6px;
-    }
-
-    .section .content p {
-      margin-bottom: 8px;
-    }
-
-    .section .content ul, .section .content ol {
-      margin: 8px 0 8px 24px;
-    }
-
-    .section .content li {
-      margin-bottom: 4px;
-    }
-
-    .section .content table {
-      border-collapse: collapse;
-      margin: 12px 0;
-      width: 100%;
-    }
-
-    .section .content table th,
-    .section .content table td {
-      border: 1px solid #e2e8f0;
-      padding: 8px 12px;
-      text-align: left;
-      font-size: 10pt;
-    }
-
-    .section .content table th {
-      background: #f8fafc;
-      font-weight: 600;
-    }
-
-    .section .content code {
-      background: #f1f5f9;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 10pt;
-      font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
-    }
-
-    .section .content pre {
-      background: #1e293b;
-      color: #e2e8f0;
-      padding: 16px;
-      border-radius: 8px;
-      overflow-x: auto;
-      font-size: 10pt;
-      line-height: 1.5;
-      margin: 12px 0;
-    }
-
-    .section .content pre code {
-      background: none;
-      padding: 0;
-      color: inherit;
-    }
-
-    .section .content blockquote {
-      border-left: 3px solid #5750F1;
-      padding-left: 16px;
-      margin: 12px 0;
-      color: #475569;
-      font-style: italic;
-    }
-
-    .section .content a {
-      color: #5750F1;
-      text-decoration: underline;
-    }
-
-    .section .content hr {
-      border: none;
-      border-top: 1px solid #e2e8f0;
-      margin: 16px 0;
-    }
-
-    /* Proof of Concept */
-    .poc-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 24px;
-      margin-top: 16px;
-    }
-
-    .poc-item {
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      overflow: hidden;
-      page-break-inside: avoid;
-    }
-
-    .poc-item img {
-      width: 100%;
-      max-height: 500px;
-      object-fit: contain;
-      display: block;
-      background: #f8fafc;
-    }
-
-    .poc-caption {
-      padding: 8px 12px;
-      font-size: 9pt;
-      color: #64748b;
-      background: #f8fafc;
-      border-top: 1px solid #e2e8f0;
-      word-break: break-all;
-    }
-
-    .poc-empty {
-      color: #94a3b8;
-      font-style: italic;
-      margin-top: 12px;
-    }
+    .confidential { text-align: center; font-size: 9pt; color: #dc2626; font-weight: 600; letter-spacing: 1px; margin-top: 32px; }
   </style>
 </head>
 <body>
 
-  <!-- Cover Page -->
-  <div class="cover">
-    <span class="cover-badge">PENETRATION TEST REPORT</span>
-    <h1>${escapeHtml(report.title)}</h1>
-    <p class="subtitle">Prepared for ${escapeHtml(report.customerName)}</p>
+  <h1>PENETRATION TEST FINDING</h1>
 
-    <dl class="cover-meta">
-      <div>
-        <dt>Report ID</dt>
-        <dd>${escapeHtml(report.reportIdCustom ?? "—")}</dd>
-      </div>
-      <div>
-        <dt>Status</dt>
-        <dd>${escapeHtml(report.status ?? "Draft")}</dd>
-      </div>
-      <div>
-        <dt>Audit Date</dt>
-        <dd>${formatDate(report.auditDate)}</dd>
-      </div>
-      <div>
-        <dt>Generated On</dt>
-        <dd>${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</dd>
-      </div>
-    </dl>
+  <!-- Finding Info Table -->
+  <table class="finding-table">
+    <tr>
+      <th>ISSUE REFERENCE NUMBER</th>
+      <td><strong>${escapeHtml(report.issueReferenceNumber ?? report.reportIdCustom ?? "—")}</strong></td>
+    </tr>
+    <tr>
+      <th>ISSUE TITLE</th>
+      <td>${escapeHtml(report.title)}</td>
+    </tr>
+    <tr>
+      <th>AFFECTED MODULE</th>
+      <td>${escapeHtml(report.location ?? "—")}</td>
+    </tr>
+    <tr>
+      <th>REFERENCES</th>
+      <td>${report.referencesList ? renderMarkdown(report.referencesList) : "—"}</td>
+    </tr>
+  </table>
 
-    <div class="confidential">CONFIDENTIAL</div>
+  <!-- CVSS Section -->
+  <h2>COMMON VULNERABILITY SCORING SYSTEM (CVSS)</h2>
+  <div class="section">
+    <p><strong>CVSS 4.0 VECTOR</strong> <code>${escapeHtml(report.cvssVector ?? "—")}</code></p>
+    <p><strong>RESULT SCORE</strong> <span class="severity-badge severity-${(report.severity ?? "info").toLowerCase()}">${severityLabel} (${escapeHtml(cvssScore)})</span></p>
+    <p><strong>STATUS</strong> ${escapeHtml(statusLabel)}</p>
   </div>
 
-  <!-- Overview -->
-  <div class="overview">
-    <h2>Report Overview</h2>
-    <table class="overview-table">
-      <tr>
-        <th>Report Title</th>
-        <td>${escapeHtml(report.title)}</td>
-      </tr>
-      <tr>
-        <th>Customer</th>
-        <td>${escapeHtml(report.customerName)}</td>
-      </tr>
-      <tr>
-        <th>Report ID</th>
-        <td><code>${escapeHtml(report.reportIdCustom ?? "—")}</code></td>
-      </tr>
-      <tr>
-        <th>Audit Date</th>
-        <td>${formatDate(report.auditDate)}</td>
-      </tr>
-      <tr>
-        <th>Overall Severity</th>
-        <td><span class="severity-badge" style="background:${severity.color}">${severity.label} (${severity.score})</span></td>
-      </tr>
-      ${report.cvssVector ? `<tr><th>CVSS 4.0 Vector</th><td><code style="font-size:9pt;word-break:break-all">${escapeHtml(report.cvssVector)}</code></td></tr>` : ""}
-      ${referenceTags.length > 0 ? `<tr><th>References</th><td>${referenceTags.map((r) => `<span class="ref-tag">${escapeHtml(r)}</span>`).join("")}</td></tr>` : ""}
-      <tr>
-        <th>Status</th>
-        <td>${escapeHtml(report.status ?? "Draft")}</td>
-      </tr>
-    </table>
+  <!-- Description -->
+  <h2>DESKRIPSI</h2>
+  <div class="section">
+    <div class="content">${renderMarkdown(report.description)}</div>
   </div>
 
-  <!-- Content Sections -->
-  ${renderSection("Executive Summary", report.executiveSummary, 1)}
-  ${renderScopeSection(report, 2)}
-  ${renderSection("Methodology", report.methodology, 3)}
-  ${renderSection("Impact Analysis", report.impact, 4)}
-  ${renderSection("Recommendations", report.recommendationSummary, 5)}
-  ${renderProofOfConcept(report.attachments ?? [], 6)}
+  <!-- Proof of Concept -->
+  ${report.pocText?.trim() || pocImages ? `
+  <div class="section">
+    <div class="content">${renderMarkdown(report.pocText)}</div>
+    ${pocImages}
+  </div>
+  ` : ""}
+
+  <!-- Impact -->
+  <h2>DAMPAK</h2>
+  <div class="section">
+    <div class="content">${renderMarkdown(report.impact)}</div>
+  </div>
+
+  <!-- Recommendation -->
+  <h2>REKOMENDASI PERBAIKAN</h2>
+  <div class="section">
+    <div class="content">${renderMarkdown(report.recommendation)}</div>
+  </div>
+
+  <div class="confidential">CONFIDENTIAL</div>
 
 </body>
 </html>`;

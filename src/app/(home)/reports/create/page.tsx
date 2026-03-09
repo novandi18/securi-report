@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
 import { Breadcrumb } from "@/components/Breadcrumbs/Breadcrumb";
 import { getCustomersForSelectAction, createReportAction } from "@/lib/actions/report";
-import { getTemplatesAction } from "@/lib/actions/template";
 import { auth } from "@/lib/auth";
 import ReportForm from "../_components/report-form";
 
 export const metadata = {
-  title: "Create Report",
+  title: "Create Finding Report",
 };
 
 export default async function CreateReportPage() {
@@ -17,17 +16,13 @@ export default async function CreateReportPage() {
     redirect("/reports");
   }
 
-  const [customersResult, templatesResult] = await Promise.all([
-    getCustomersForSelectAction(),
-    getTemplatesAction(),
-  ]);
+  const customersResult = await getCustomersForSelectAction();
 
   return (
     <>
-      <Breadcrumb pageName="Create Report" />
+      <Breadcrumb pageName="Create Finding Report" />
       <ReportForm
         customers={customersResult.data}
-        templates={templatesResult.data}
         serverAction={createReportAction}
       />
     </>

@@ -85,8 +85,9 @@ export async function configureIndexes() {
     searchableAttributes: [
       "title",
       "reportIdCustom",
+      "issueReferenceNumber",
       "customerName",
-      "executiveSummary",
+      "description",
     ],
     displayedAttributes: [
       "id",

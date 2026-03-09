@@ -14,19 +14,6 @@ import { existsSync } from "fs";
 import { unlink } from "fs/promises";
 import path from "path";
 import { sanitizeMarkdown, audit, checkDeleteRateLimit } from "@/lib/security";
-import type { Issa1Target, Issa2Target, Issa3Target } from "@/lib/db/schema";
-
-/** Safely parse a JSON string from a hidden form field into a typed array, or return null. */
-function parseJsonField<T>(value: string | null | undefined): T[] | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed) || parsed.length === 0) return null;
-    return parsed as T[];
-  } catch {
-    return null;
-  }
-}
 
 export type ActionResult = {
   success: boolean;
@@ -106,15 +93,19 @@ export async function getReportAction(id: string) {
         customerId: reports.customerId,
         reportIdCustom: reports.reportIdCustom,
         title: reports.title,
-        executiveSummary: reports.executiveSummary,
-        scopeIssa1: reports.scopeIssa1,
-        scopeIssa2: reports.scopeIssa2,
-        scopeIssa3: reports.scopeIssa3,
-        methodology: reports.methodology,
-        referencesFramework: reports.referencesFramework,
+        clientCode: reports.clientCode,
+        serviceAffected: reports.serviceAffected,
+        findingSequence: reports.findingSequence,
+        issueReferenceNumber: reports.issueReferenceNumber,
+        severity: reports.severity,
+        location: reports.location,
+        description: reports.description,
+        pocText: reports.pocText,
+        referencesList: reports.referencesList,
         cvssVector: reports.cvssVector,
+        cvssScore: reports.cvssScore,
         impact: reports.impact,
-        recommendationSummary: reports.recommendationSummary,
+        recommendation: reports.recommendation,
         auditDate: reports.auditDate,
         status: reports.status,
         createdBy: reports.createdBy,
@@ -177,15 +168,19 @@ export async function createReportAction(
     customerId: formData.get("customerId") as string,
     reportIdCustom: formData.get("reportIdCustom") as string,
     title: formData.get("title") as string,
-    executiveSummary: formData.get("executiveSummary") as string,
-    scopeIssa1: formData.get("scopeIssa1") as string,
-    scopeIssa2: formData.get("scopeIssa2") as string,
-    scopeIssa3: formData.get("scopeIssa3") as string,
-    methodology: (formData.get("methodology") as string) ?? "",
-    referencesFramework: formData.get("referencesFramework") as string,
+    clientCode: formData.get("clientCode") as string,
+    serviceAffected: formData.get("serviceAffected") as string,
+    findingSequence: formData.get("findingSequence") as string,
+    issueReferenceNumber: formData.get("issueReferenceNumber") as string,
+    severity: (formData.get("severity") as string) || "Info",
+    location: formData.get("location") as string,
+    description: formData.get("description") as string,
+    pocText: formData.get("pocText") as string,
+    referencesList: formData.get("referencesList") as string,
     cvssVector: formData.get("cvssVector") as string,
+    cvssScore: formData.get("cvssScore") as string,
     impact: formData.get("impact") as string,
-    recommendationSummary: formData.get("recommendationSummary") as string,
+    recommendation: formData.get("recommendation") as string,
     auditDate: (formData.get("auditDate") as string) ?? "",
     status: (formData.get("status") as string) || "Draft",
   };
@@ -227,19 +222,26 @@ export async function createReportAction(
 
     const reportIdCustom = parsed.data.reportIdCustom || generateReportId();
 
+    // Compile the issue reference number
+    const issueRef = parsed.data.issueReferenceNumber || reportIdCustom;
+
     await db.insert(reports).values({
       customerId: parsed.data.customerId,
       reportIdCustom,
       title: parsed.data.title,
-      executiveSummary: sanitizeMarkdown(parsed.data.executiveSummary ?? "") || null,
-      scopeIssa1: parseJsonField<Issa1Target>(parsed.data.scopeIssa1),
-      scopeIssa2: parseJsonField<Issa2Target>(parsed.data.scopeIssa2),
-      scopeIssa3: parseJsonField<Issa3Target>(parsed.data.scopeIssa3),
-      methodology: sanitizeMarkdown(parsed.data.methodology ?? "") || null,
-      referencesFramework: parsed.data.referencesFramework ?? null,
+      clientCode: parsed.data.clientCode ?? null,
+      serviceAffected: parsed.data.serviceAffected ?? null,
+      findingSequence: parsed.data.findingSequence ?? null,
+      issueReferenceNumber: issueRef,
+      severity: parsed.data.severity,
+      location: parsed.data.location ?? null,
+      description: sanitizeMarkdown(parsed.data.description ?? "") || null,
+      pocText: sanitizeMarkdown(parsed.data.pocText ?? "") || null,
+      referencesList: parsed.data.referencesList ?? null,
       cvssVector: parsed.data.cvssVector ?? null,
+      cvssScore: parsed.data.cvssScore ?? null,
       impact: sanitizeMarkdown(parsed.data.impact ?? "") || null,
-      recommendationSummary: sanitizeMarkdown(parsed.data.recommendationSummary ?? "") || null,
+      recommendation: sanitizeMarkdown(parsed.data.recommendation ?? "") || null,
       auditDate: parsed.data.auditDate ?? null,
       status: parsed.data.status,
       createdBy: session.user.id,
@@ -251,9 +253,10 @@ export async function createReportAction(
         id: reports.id,
         title: reports.title,
         reportIdCustom: reports.reportIdCustom,
+        issueReferenceNumber: reports.issueReferenceNumber,
         customerName: customers.name,
         status: reports.status,
-        executiveSummary: reports.executiveSummary,
+        description: reports.description,
         auditDate: reports.auditDate,
       })
       .from(reports)
@@ -346,15 +349,19 @@ export async function updateReportAction(
     customerId: formData.get("customerId") as string,
     reportIdCustom: formData.get("reportIdCustom") as string,
     title: formData.get("title") as string,
-    executiveSummary: formData.get("executiveSummary") as string,
-    scopeIssa1: formData.get("scopeIssa1") as string,
-    scopeIssa2: formData.get("scopeIssa2") as string,
-    scopeIssa3: formData.get("scopeIssa3") as string,
-    methodology: (formData.get("methodology") as string) ?? "",
-    referencesFramework: formData.get("referencesFramework") as string,
+    clientCode: formData.get("clientCode") as string,
+    serviceAffected: formData.get("serviceAffected") as string,
+    findingSequence: formData.get("findingSequence") as string,
+    issueReferenceNumber: formData.get("issueReferenceNumber") as string,
+    severity: (formData.get("severity") as string) || "Info",
+    location: formData.get("location") as string,
+    description: formData.get("description") as string,
+    pocText: formData.get("pocText") as string,
+    referencesList: formData.get("referencesList") as string,
     cvssVector: formData.get("cvssVector") as string,
+    cvssScore: formData.get("cvssScore") as string,
     impact: formData.get("impact") as string,
-    recommendationSummary: formData.get("recommendationSummary") as string,
+    recommendation: formData.get("recommendation") as string,
     auditDate: (formData.get("auditDate") as string) ?? "",
     status: (formData.get("status") as string) || "Draft",
   };
@@ -421,21 +428,27 @@ export async function updateReportAction(
       return { success: false, error: "Selected customer does not exist.", values: raw };
     }
 
+    const issueRef = parsed.data.issueReferenceNumber || parsed.data.reportIdCustom || null;
+
     await db
       .update(reports)
       .set({
         customerId: parsed.data.customerId,
         reportIdCustom: parsed.data.reportIdCustom ?? null,
         title: parsed.data.title,
-        executiveSummary: sanitizeMarkdown(parsed.data.executiveSummary ?? "") || null,
-        scopeIssa1: parseJsonField<Issa1Target>(parsed.data.scopeIssa1),
-        scopeIssa2: parseJsonField<Issa2Target>(parsed.data.scopeIssa2),
-        scopeIssa3: parseJsonField<Issa3Target>(parsed.data.scopeIssa3),
-        methodology: sanitizeMarkdown(parsed.data.methodology ?? "") || null,
-        referencesFramework: parsed.data.referencesFramework ?? null,
+        clientCode: parsed.data.clientCode ?? null,
+        serviceAffected: parsed.data.serviceAffected ?? null,
+        findingSequence: parsed.data.findingSequence ?? null,
+        issueReferenceNumber: issueRef,
+        severity: parsed.data.severity,
+        location: parsed.data.location ?? null,
+        description: sanitizeMarkdown(parsed.data.description ?? "") || null,
+        pocText: sanitizeMarkdown(parsed.data.pocText ?? "") || null,
+        referencesList: parsed.data.referencesList ?? null,
         cvssVector: parsed.data.cvssVector ?? null,
+        cvssScore: parsed.data.cvssScore ?? null,
         impact: sanitizeMarkdown(parsed.data.impact ?? "") || null,
-        recommendationSummary: sanitizeMarkdown(parsed.data.recommendationSummary ?? "") || null,
+        recommendation: sanitizeMarkdown(parsed.data.recommendation ?? "") || null,
         auditDate: parsed.data.auditDate ?? null,
         status: parsed.data.status,
       })
@@ -447,9 +460,10 @@ export async function updateReportAction(
         id: reports.id,
         title: reports.title,
         reportIdCustom: reports.reportIdCustom,
+        issueReferenceNumber: reports.issueReferenceNumber,
         customerName: customers.name,
         status: reports.status,
-        executiveSummary: reports.executiveSummary,
+        description: reports.description,
         auditDate: reports.auditDate,
       })
       .from(reports)
@@ -580,10 +594,10 @@ export async function deleteReportAction(id: string): Promise<ActionResult> {
         id: reports.id,
         status: reports.status,
         createdBy: reports.createdBy,
-        executiveSummary: reports.executiveSummary,
-        methodology: reports.methodology,
+        description: reports.description,
+        pocText: reports.pocText,
         impact: reports.impact,
-        recommendationSummary: reports.recommendationSummary,
+        recommendation: reports.recommendation,
       })
       .from(reports)
       .where(eq(reports.id, id))
@@ -617,10 +631,10 @@ export async function deleteReportAction(id: string): Promise<ActionResult> {
 
     // ── Extract inline image URLs from Markdown content fields ──
     const contentFields = [
-      existing.executiveSummary,
-      existing.methodology,
+      existing.description,
+      existing.pocText,
       existing.impact,
-      existing.recommendationSummary,
+      existing.recommendation,
     ];
     const inlineImageUrls: string[] = [];
     const imgRegex = /\\includegraphics(?:\[[^\]]*\])?\{([^}]*)\}/g;

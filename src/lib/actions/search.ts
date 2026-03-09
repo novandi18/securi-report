@@ -48,9 +48,10 @@ export async function reindexAllAction(): Promise<ReindexResult> {
         id: r.id,
         title: r.title,
         reportIdCustom: r.reportIdCustom,
+        issueReferenceNumber: r.issueReferenceNumber,
         customerName: c.name,
         status: r.status,
-        executiveSummary: r.executiveSummary,
+        description: r.description,
         auditDate: r.auditDate,
       })
       .from(r)

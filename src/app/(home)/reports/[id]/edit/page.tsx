@@ -5,13 +5,12 @@ import {
   getCustomersForSelectAction,
   updateReportAction,
 } from "@/lib/actions/report";
-import { getTemplatesAction } from "@/lib/actions/template";
 import { getAttachmentsAction } from "@/lib/actions/attachment";
 import { auth } from "@/lib/auth";
 import ReportForm from "../../_components/report-form";
 
 export const metadata = {
-  title: "Edit Report",
+  title: "Edit Finding Report",
 };
 
 export default async function EditReportPage({
@@ -28,10 +27,9 @@ export default async function EditReportPage({
 
   const { id } = await params;
 
-  const [reportResult, customersResult, templatesResult, attachmentsResult] = await Promise.all([
+  const [reportResult, customersResult, attachmentsResult] = await Promise.all([
     getReportAction(id),
     getCustomersForSelectAction(),
-    getTemplatesAction(),
     getAttachmentsAction(id),
   ]);
 
@@ -49,11 +47,10 @@ export default async function EditReportPage({
 
   return (
     <>
-      <Breadcrumb pageName="Edit Report" />
+      <Breadcrumb pageName="Edit Finding Report" />
       <ReportForm
         report={reportResult.data}
         customers={customersResult.data}
-        templates={templatesResult.data}
         initialAttachments={attachmentsResult.data.map((a) => ({
           id: a.id,
           fileUrl: a.fileUrl,

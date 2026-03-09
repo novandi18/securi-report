@@ -43,6 +43,13 @@
       "when": 1772870400000,
       "tag": "0005_scope_issa_json",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1773500000000,
+      "tag": "0006_single_finding_report",
+      "breakpoints": true
     }
   ]
 }
