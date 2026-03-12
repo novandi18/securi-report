@@ -7,12 +7,16 @@ import {
   Strikethrough,
   List,
   ListOrdered,
+  ListChecks,
   Code,
   Quote,
   Link2,
   ChevronDown,
   Table,
   Minus,
+  Superscript,
+  Subscript,
+  Hash,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditorState } from "@/lib/markdown-helpers";
@@ -23,11 +27,16 @@ import {
   insertInlineCode,
   insertHeading,
   insertList,
+  insertTaskList,
+  insertHtmlList,
   insertCodeBlock,
   insertQuote,
   insertLink,
   insertTable,
   insertHorizontalRule,
+  insertSymbol,
+  insertSuperscript,
+  insertSubscript,
 } from "@/lib/markdown-helpers";
 
 /* ───── Types ─────────────────────────────────────── */
@@ -282,6 +291,194 @@ function TableButton({
 }
 
 /* ═══════════════════════════════════════════════════
+   List Dropdown (all list types)
+   ═══════════════════════════════════════════════════ */
+
+const LIST_OPTIONS = [
+  { label: "Bullet List", value: "bullet", icon: "•", description: "- item" },
+  { label: "Numbered List", value: "ordered", icon: "1.", description: "1. item" },
+  { label: "Task / Checkbox", value: "task", icon: "☐", description: "- [ ] item" },
+  { label: "Lowercase Letters (a, b, c)", value: "alpha-lower", icon: "a.", description: "<ol type=\"a\">" },
+  { label: "Uppercase Letters (A, B, C)", value: "alpha-upper", icon: "A.", description: "<ol type=\"A\">" },
+  { label: "Roman Numerals (i, ii, iii)", value: "roman-lower", icon: "i.", description: "<ol type=\"i\">" },
+  { label: "Roman Numerals (I, II, III)", value: "roman-upper", icon: "I.", description: "<ol type=\"I\">" },
+] as const;
+
+function ListDropdown({
+  getState,
+  applyState,
+}: {
+  getState: () => EditorState;
+  applyState: (s: EditorState) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const handleSelect = useCallback(
+    (value: string) => {
+      setOpen(false);
+      const s = getState();
+      switch (value) {
+        case "bullet":
+          applyState(insertList(s, "bullet"));
+          break;
+        case "ordered":
+          applyState(insertList(s, "ordered"));
+          break;
+        case "task":
+          applyState(insertTaskList(s));
+          break;
+        case "alpha-lower":
+          applyState(insertHtmlList(s, "a"));
+          break;
+        case "alpha-upper":
+          applyState(insertHtmlList(s, "A"));
+          break;
+        case "roman-lower":
+          applyState(insertHtmlList(s, "i"));
+          break;
+        case "roman-upper":
+          applyState(insertHtmlList(s, "I"));
+          break;
+      }
+    },
+    [getState, applyState],
+  );
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "flex h-7 items-center gap-0.5 rounded px-1.5 text-xs",
+          "text-gray-500 hover:bg-gray-200 hover:text-gray-800",
+          "dark:text-slate-400 dark:hover:bg-slate-600/50 dark:hover:text-white",
+          "transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500",
+        )}
+        title="Lists"
+      >
+        <List size={15} />
+        <ChevronDown size={10} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
+          {LIST_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handleSelect(opt.value)}
+              className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors"
+            >
+              <span className="w-5 text-center font-mono text-[11px] text-gray-400 dark:text-slate-500">{opt.icon}</span>
+              <span className="flex-1">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   Symbol Dropdown
+   ═══════════════════════════════════════════════════ */
+
+const SYMBOL_GROUPS = [
+  {
+    label: "Arrows",
+    symbols: ["→", "←", "↑", "↓", "↔", "⇒", "⇐", "⇔"],
+  },
+  {
+    label: "Check / Status",
+    symbols: ["✓", "✗", "✔", "✘", "⚠", "ℹ", "⚡", "🔒", "🔓"],
+  },
+  {
+    label: "Bullets / Shapes",
+    symbols: ["•", "◦", "▪", "▫", "►", "▸", "◆", "◇", "★", "☆"],
+  },
+  {
+    label: "Math / Logic",
+    symbols: ["±", "×", "÷", "≤", "≥", "≠", "≈", "∞", "∑", "√"],
+  },
+  {
+    label: "Legal / Misc",
+    symbols: ["©", "®", "™", "§", "¶", "†", "‡", "…", "°", "µ"],
+  },
+  {
+    label: "Brackets / Quotes",
+    symbols: ["\u00AB", "\u00BB", "\u2039", "\u203A", "\u201E", "\u201C", "\u201D", "\u2018", "\u2019", "\u2014"],
+  },
+];
+
+function SymbolDropdown({
+  getState,
+  applyState,
+}: {
+  getState: () => EditorState;
+  applyState: (s: EditorState) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <ToolbarBtn
+        icon={<Hash size={15} />}
+        tooltip="Insert Symbol"
+        onClick={() => setOpen(!open)}
+      />
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-md border border-gray-200 bg-white p-3 shadow-lg dark:border-slate-600 dark:bg-slate-800 max-h-80 overflow-y-auto">
+          {SYMBOL_GROUPS.map((group) => (
+            <div key={group.label} className="mb-2 last:mb-0">
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">
+                {group.label}
+              </p>
+              <div className="flex flex-wrap gap-0.5">
+                {group.symbols.map((sym) => (
+                  <button
+                    key={sym}
+                    type="button"
+                    onClick={() => {
+                      applyState(insertSymbol(getState(), sym));
+                      setOpen(false);
+                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded text-sm hover:bg-gray-200 dark:hover:bg-slate-600/50 transition-colors"
+                    title={sym}
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
    Main Toolbar
    ═══════════════════════════════════════════════════ */
 
@@ -319,17 +516,8 @@ export default function Toolbar({ getState, applyState }: ToolbarProps) {
 
       <Divider />
 
-      {/* Lists */}
-      <ToolbarBtn
-        icon={<List size={15} />}
-        tooltip="Bullet List"
-        onClick={() => act((s) => insertList(s, "bullet"))}
-      />
-      <ToolbarBtn
-        icon={<ListOrdered size={15} />}
-        tooltip="Numbered List"
-        onClick={() => act((s) => insertList(s, "ordered"))}
-      />
+      {/* Lists dropdown */}
+      <ListDropdown getState={getState} applyState={applyState} />
 
       <Divider />
 
@@ -368,6 +556,23 @@ export default function Toolbar({ getState, applyState }: ToolbarProps) {
 
       {/* Link */}
       <LinkButton getState={getState} applyState={applyState} />
+
+      <Divider />
+
+      {/* Superscript / Subscript */}
+      <ToolbarBtn
+        icon={<Superscript size={15} />}
+        tooltip="Superscript (<sup>)"
+        onClick={() => act((s) => insertSuperscript(s))}
+      />
+      <ToolbarBtn
+        icon={<Subscript size={15} />}
+        tooltip="Subscript (<sub>)"
+        onClick={() => act((s) => insertSubscript(s))}
+      />
+
+      {/* Symbols */}
+      <SymbolDropdown getState={getState} applyState={applyState} />
     </div>
   );
 }

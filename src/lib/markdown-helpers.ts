@@ -239,3 +239,116 @@ export function insertImage(state: EditorState, imagePath: string, alt = "image"
 
   return { text: newText, selectionStart: cursorPos, selectionEnd: cursorPos };
 }
+
+// ─── Task / Checkbox List (- [ ] item) ──────────────────
+
+export function insertTaskList(state: EditorState): EditorState {
+  const { text, selectionStart, selectionEnd } = state;
+  const selected = text.slice(selectionStart, selectionEnd);
+  const before = text.slice(0, selectionStart);
+  const after = text.slice(selectionEnd);
+
+  const ensureNewline = before.length > 0 && !before.endsWith("\n") ? "\n" : "";
+
+  if (selected) {
+    const items = selected
+      .split("\n")
+      .filter((l) => l.trim())
+      .map((l) => `- [ ] ${l.trim()}`)
+      .join("\n");
+    const block = `${ensureNewline}${items}\n`;
+    const newText = before + block + after;
+    const cursorPos = before.length + block.length;
+    return { text: newText, selectionStart: cursorPos, selectionEnd: cursorPos };
+  }
+
+  const template = `${ensureNewline}- [ ] `;
+  const newText = before + template + after;
+  const cursorPos = before.length + template.length;
+  return { text: newText, selectionStart: cursorPos, selectionEnd: cursorPos };
+}
+
+// ─── HTML Ordered List with type (a, A, i, I) ──────────
+
+export function insertHtmlList(
+  state: EditorState,
+  type: "a" | "A" | "i" | "I",
+): EditorState {
+  const { text, selectionStart, selectionEnd } = state;
+  const selected = text.slice(selectionStart, selectionEnd);
+  const before = text.slice(0, selectionStart);
+  const after = text.slice(selectionEnd);
+
+  const ensureNewline = before.length > 0 && !before.endsWith("\n") ? "\n" : "";
+
+  if (selected) {
+    const items = selected
+      .split("\n")
+      .filter((l) => l.trim())
+      .map((l) => `  <li>${l.trim()}</li>`)
+      .join("\n");
+    const block = `${ensureNewline}<ol type="${type}">\n${items}\n</ol>\n`;
+    const newText = before + block + after;
+    const cursorPos = before.length + block.length;
+    return { text: newText, selectionStart: cursorPos, selectionEnd: cursorPos };
+  }
+
+  const block = `${ensureNewline}<ol type="${type}">\n  <li></li>\n</ol>\n`;
+  const newText = before + block + after;
+  const cursorPos = before.length + ensureNewline.length + `<ol type="${type}">\n  <li>`.length;
+  return { text: newText, selectionStart: cursorPos, selectionEnd: cursorPos };
+}
+
+// ─── Symbol Insertion ───────────────────────────────────
+
+export function insertSymbol(state: EditorState, symbol: string): EditorState {
+  const { text, selectionStart, selectionEnd } = state;
+  const before = text.slice(0, selectionStart);
+  const after = text.slice(selectionEnd);
+
+  const newText = before + symbol + after;
+  const cursorPos = before.length + symbol.length;
+  return { text: newText, selectionStart: cursorPos, selectionEnd: cursorPos };
+}
+
+// ─── Superscript / Subscript ────────────────────────────
+
+export function insertSuperscript(state: EditorState): EditorState {
+  const { text, selectionStart, selectionEnd } = state;
+  const selected = text.slice(selectionStart, selectionEnd);
+  const before = text.slice(0, selectionStart);
+  const after = text.slice(selectionEnd);
+
+  const content = selected || "text";
+  const newText = before + `<sup>${content}</sup>` + after;
+
+  if (!selected) {
+    const cursor = before.length + 5; // after <sup>
+    return { text: newText, selectionStart: cursor, selectionEnd: cursor + 4 };
+  }
+  return {
+    text: newText,
+    selectionStart: before.length + 5,
+    selectionEnd: before.length + 5 + selected.length,
+  };
+}
+
+export function insertSubscript(state: EditorState): EditorState {
+  const { text, selectionStart, selectionEnd } = state;
+  const selected = text.slice(selectionStart, selectionEnd);
+  const before = text.slice(0, selectionStart);
+  const after = text.slice(selectionEnd);
+
+  const content = selected || "text";
+  const newText = before + `<sub>${content}</sub>` + after;
+
+  if (!selected) {
+    const cursor = before.length + 5; // after <sub>
+    return { text: newText, selectionStart: cursor, selectionEnd: cursor + 4 };
+  }
+  return {
+    text: newText,
+    selectionStart: before.length + 5,
+    selectionEnd: before.length + 5 + selected.length,
+  };
+}

@@ -21,8 +21,8 @@ export function markdownToHtml(input: string): string {
   // Sanitize HTML (only in browser where DOMPurify works)
   if (typeof window !== "undefined") {
     return DOMPurify.sanitize(rawHtml, {
-      ADD_TAGS: ["figure", "figcaption"],
-      ADD_ATTR: ["target"],
+      ADD_TAGS: ["figure", "figcaption", "input"],
+      ADD_ATTR: ["target", "type", "checked", "disabled"],
     });
   }
 
