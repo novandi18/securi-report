@@ -7,6 +7,73 @@ import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_DIMENSION = 1024; // max width/height after resize
+
+/**
+ * Compress an image file using Canvas.
+ * Resizes to fit within MAX_DIMENSION while keeping aspect ratio,
+ * then encodes as WebP at high quality (0.85).
+ */
+function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    // GIF can't be properly compressed via Canvas — skip
+    if (file.type === "image/gif") {
+      resolve(file);
+      return;
+    }
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let { width, height } = img;
+
+      // Only resize if larger than MAX_DIMENSION
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file); // fallback
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) {
+            // If compressed is larger, use original
+            resolve(file);
+            return;
+          }
+          const compressed = new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), {
+            type: "image/webp",
+          });
+          resolve(compressed);
+        },
+        "image/webp",
+        0.85,
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image for compression."));
+    };
+
+    img.src = url;
+  });
+}
 
 interface LogoUploadProps {
   value: string;
@@ -36,8 +103,11 @@ export function LogoUpload({ value, onChange, error }: LogoUploadProps) {
       setUploading(true);
 
       try {
+        // Compress image before uploading
+        const compressed = await compressImage(file);
+
         const fd = new FormData();
-        fd.append("image", file);
+        fd.append("image", compressed);
         const result = await uploadToImgbbAction(fd);
 
         if (result.success && result.url) {

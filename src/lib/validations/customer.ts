@@ -5,18 +5,6 @@ export const customerCreateSchema = z.object({
     .string()
     .min(1, "Customer name is required")
     .max(255, "Name must be at most 255 characters"),
-  email: z
-    .string()
-    .max(100, "Email must be at most 100 characters")
-    .email("Invalid email address")
-    .or(z.literal(""))
-    .optional()
-    .transform((v) => (v === "" ? null : v)),
-  description: z
-    .string()
-    .max(5000, "Description is too long")
-    .optional()
-    .transform((v) => (v === "" ? null : v)),
   logoUrl: z
     .string()
     .url("Invalid URL")

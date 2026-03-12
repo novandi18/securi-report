@@ -71,8 +71,8 @@ export async function configureIndexes() {
   // Customers
   const customersIdx = client.index(INDEX.CUSTOMERS);
   await customersIdx.updateSettings({
-    searchableAttributes: ["name", "email", "description"],
-    displayedAttributes: ["id", "name", "email", "description"],
+    searchableAttributes: ["name"],
+    displayedAttributes: ["id", "name"],
     typoTolerance: {
       enabled: true,
       minWordSizeForTypos: { oneTypo: 3, twoTypos: 6 },

@@ -137,10 +137,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          (c.email && c.email.toLowerCase().includes(q)) ||
-          (c.description && c.description.toLowerCase().includes(q)),
+        (c) => c.name.toLowerCase().includes(q),
       );
     }
 
@@ -236,7 +233,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, email, or description…"
+            placeholder="Search by name…"
             className="w-full rounded-lg border border-stroke bg-white py-2.5 pl-10 pr-4 text-sm text-dark outline-none transition-colors placeholder:text-dark-5 focus:border-primary dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:placeholder:text-dark-6 dark:focus:border-primary"
           />
           {searchQuery && (
@@ -279,8 +276,6 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="pl-5">Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Description</TableHead>
               <TableHead>Created</TableHead>
               {canEditCustomers && (
                 <TableHead className="pr-5 text-right">Actions</TableHead>
@@ -291,7 +286,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
             {paginatedItems.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canEditCustomers ? 5 : 4}
+                  colSpan={canEditCustomers ? 3 : 2}
                   className="py-10 text-center text-dark-5 dark:text-dark-6"
                 >
                   No customers yet.{" "}
@@ -303,15 +298,6 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                 <TableRow key={customer.id}>
                   <TableCell className="pl-5 font-medium text-dark dark:text-white">
                     {customer.name}
-                  </TableCell>
-                  <TableCell className="text-dark-5 dark:text-dark-6">
-                    {customer.email || "—"}
-                  </TableCell>
-                  <TableCell
-                    className="max-w-xs truncate text-dark-5 dark:text-dark-6"
-                    title={customer.description || undefined}
-                  >
-                    {customer.description || "—"}
                   </TableCell>
                   <TableCell className="text-dark-5 dark:text-dark-6">
                     {customer.createdAt

@@ -43,8 +43,6 @@ export default function CustomerFormModal({
   const v = state?.values;
   const val = {
     name: v?.name ?? customer?.name ?? "",
-    email: v?.email ?? customer?.email ?? "",
-    description: v?.description ?? customer?.description ?? "",
     logoUrl: v?.logoUrl ?? customer?.logoUrl ?? "",
   };
 
@@ -86,39 +84,6 @@ export default function CustomerFormModal({
             {fieldErrors?.name && (
               <p className="mt-1 text-xs text-red-500">
                 {fieldErrors.name[0]}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <InputGroup
-              label="Email"
-              name="email"
-              type="email"
-              placeholder="customer@example.com"
-              defaultValue={val.email}
-            />
-            {fieldErrors?.email && (
-              <p className="mt-1 text-xs text-red-500">
-                {fieldErrors.email[0]}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="text-body-sm font-medium text-dark dark:text-white">
-              Description
-            </label>
-            <textarea
-              name="description"
-              placeholder="Brief description of the customer..."
-              defaultValue={val.description}
-              rows={3}
-              className="mt-3 w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5.5 py-3 text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:focus:border-primary"
-            />
-            {fieldErrors?.description && (
-              <p className="mt-1 text-xs text-red-500">
-                {fieldErrors.description[0]}
               </p>
             )}
           </div>

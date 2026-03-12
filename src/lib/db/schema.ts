@@ -48,8 +48,6 @@ export const customers = mysqlTable("customers", {
     .primaryKey()
     .default(sql`(UUID())`),
   name: varchar("name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 100 }),
-  description: text("description"),
   logoUrl: varchar("logo_url", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
 });

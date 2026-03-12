@@ -117,20 +117,27 @@ export async function seedCustomersAction(): Promise<SeedResult> {
   try {
     await requireAdmin();
 
-    const faker = await getFaker();
+    const dummyCustomers = [
+      { name: "PT Profindo Sekuritas Indonesia" },
+      { name: "PT Laba Sekuritas" },
+      { name: "PT Semesta Indovest Sekuritas" },
+    ];
 
-    const dummyCustomers = Array.from({ length: 10 }, () => ({
-      name: faker.company.name(),
-      email: faker.internet.email().toLowerCase(),
-      description: `${faker.company.catchPhrase()}. ${faker.lorem.sentence()}`,
-    }));
-
+    let inserted = 0;
     for (const c of dummyCustomers) {
-      await db.insert(customers).values(c);
+      const [existing] = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.name, c.name))
+        .limit(1);
+      if (!existing) {
+        await db.insert(customers).values(c);
+        inserted++;
+      }
     }
 
     revalidatePath("/customers");
-    return { success: true, count: dummyCustomers.length };
+    return { success: true, count: inserted };
   } catch (error) {
     console.error("seedCustomersAction:", error);
     return {
