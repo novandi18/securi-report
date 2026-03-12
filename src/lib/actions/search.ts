@@ -35,6 +35,7 @@ export async function reindexAllAction(): Promise<ReindexResult> {
       .select({
         id: customers.id,
         name: customers.name,
+        code: customers.code,
       })
       .from(customers);
     await replaceAllDocuments(INDEX.CUSTOMERS, allCustomers);

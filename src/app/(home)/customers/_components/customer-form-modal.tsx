@@ -43,6 +43,7 @@ export default function CustomerFormModal({
   const v = state?.values;
   const val = {
     name: v?.name ?? customer?.name ?? "",
+    code: v?.code ?? customer?.code ?? "",
     logoUrl: v?.logoUrl ?? customer?.logoUrl ?? "",
   };
 
@@ -84,6 +85,25 @@ export default function CustomerFormModal({
             {fieldErrors?.name && (
               <p className="mt-1 text-xs text-red-500">
                 {fieldErrors.name[0]}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <InputGroup
+              label="Code"
+              name="code"
+              type="text"
+              placeholder="e.g. RG"
+              required
+              defaultValue={val.code}
+            />
+            <p className="mt-1 text-xs text-dark-5 dark:text-dark-6">
+              Short uppercase code used in finding IDs (e.g. HTPT-<strong>RG</strong>-H-SMB-001)
+            </p>
+            {fieldErrors?.code && (
+              <p className="mt-1 text-xs text-red-500">
+                {fieldErrors.code[0]}
               </p>
             )}
           </div>

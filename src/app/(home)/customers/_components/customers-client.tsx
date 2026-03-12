@@ -137,7 +137,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (c) => c.name.toLowerCase().includes(q),
+        (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q),
       );
     }
 
@@ -233,7 +233,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name…"
+            placeholder="Search by name or code…"
             className="w-full rounded-lg border border-stroke bg-white py-2.5 pl-10 pr-4 text-sm text-dark outline-none transition-colors placeholder:text-dark-5 focus:border-primary dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:placeholder:text-dark-6 dark:focus:border-primary"
           />
           {searchQuery && (
@@ -276,6 +276,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="pl-5">Name</TableHead>
+              <TableHead>Code</TableHead>
               <TableHead>Created</TableHead>
               {canEditCustomers && (
                 <TableHead className="pr-5 text-right">Actions</TableHead>
@@ -286,7 +287,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
             {paginatedItems.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canEditCustomers ? 3 : 2}
+                  colSpan={canEditCustomers ? 4 : 3}
                   className="py-10 text-center text-dark-5 dark:text-dark-6"
                 >
                   No customers yet.{" "}
@@ -298,6 +299,9 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                 <TableRow key={customer.id}>
                   <TableCell className="pl-5 font-medium text-dark dark:text-white">
                     {customer.name}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm text-dark-5 dark:text-dark-6">
+                    {customer.code}
                   </TableCell>
                   <TableCell className="text-dark-5 dark:text-dark-6">
                     {customer.createdAt

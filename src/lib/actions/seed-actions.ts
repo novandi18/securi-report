@@ -118,9 +118,13 @@ export async function seedCustomersAction(): Promise<SeedResult> {
     await requireAdmin();
 
     const dummyCustomers = [
-      { name: "PT Profindo Sekuritas Indonesia" },
-      { name: "PT Laba Sekuritas" },
-      { name: "PT Semesta Indovest Sekuritas" },
+      { name: "PT Profindo Sekuritas Indonesia", code: "RG" },
+      { name: "PT Laba Sekuritas", code: "TF" },
+      { name: "PT Semesta Indovest Sekuritas", code: "MG" },
+      { name: "Henan Putihrai", code: "HP" },
+      { name: "PT RHB Sekuritas Indonesia", code: "DR" },
+      { name: "PT Sukadana Prima Sekuritas", code: "AD" },
+      { name: "Elit Sukses Sekuritas", code: "SA" },
     ];
 
     let inserted = 0;

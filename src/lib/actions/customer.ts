@@ -75,6 +75,7 @@ export async function createCustomerAction(
 
   const raw = {
     name: formData.get("name") as string,
+    code: formData.get("code") as string,
     logoUrl: formData.get("logoUrl") as string,
   };
 
@@ -92,6 +93,7 @@ export async function createCustomerAction(
   try {
     await db.insert(customers).values({
       name: parsed.data.name,
+      code: parsed.data.code,
       logoUrl: parsed.data.logoUrl ?? null,
     });
 
@@ -105,6 +107,7 @@ export async function createCustomerAction(
       syncDocument(INDEX.CUSTOMERS, {
         id: created.id,
         name: created.name,
+        code: created.code,
       });
     }
 
@@ -137,6 +140,7 @@ export async function updateCustomerAction(
   const raw = {
     id: formData.get("id") as string,
     name: formData.get("name") as string,
+    code: formData.get("code") as string,
     logoUrl: formData.get("logoUrl") as string,
   };
 
@@ -166,6 +170,7 @@ export async function updateCustomerAction(
       .update(customers)
       .set({
         name: parsed.data.name,
+        code: parsed.data.code,
         logoUrl: parsed.data.logoUrl ?? null,
       })
       .where(eq(customers.id, parsed.data.id));
@@ -174,6 +179,7 @@ export async function updateCustomerAction(
     syncDocument(INDEX.CUSTOMERS, {
       id: parsed.data.id,
       name: parsed.data.name,
+      code: parsed.data.code,
     });
 
     await audit({ userId: session.user.id, action: "customer.update", resourceId: parsed.data.id });
