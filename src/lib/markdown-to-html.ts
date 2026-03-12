@@ -10,13 +10,17 @@ import DOMPurify from "dompurify";
 export function markdownToHtml(input: string): string {
   if (!input || !input.trim()) return "";
 
+  // Collapse 3+ consecutive newlines into 2 (one blank line max)
+  // so that `breaks: true` doesn't produce excessive <br> tags
+  const normalized = input.replace(/\n{3,}/g, "\n\n");
+
   // Configure marked for security
   marked.setOptions({
     breaks: true,
     gfm: true,
   });
 
-  const rawHtml = marked.parse(input, { async: false }) as string;
+  const rawHtml = marked.parse(normalized, { async: false }) as string;
 
   // Sanitize HTML (only in browser where DOMPurify works)
   if (typeof window !== "undefined") {
