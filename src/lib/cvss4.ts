@@ -237,11 +237,11 @@ export function getSeverity(score: number): SeverityLabel {
 /** Severity badge colors */
 export function getSeverityColor(severity: SeverityLabel): string {
   switch (severity) {
-    case "None": return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-    case "Low": return "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
-    case "Medium": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300";
-    case "High": return "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300";
-    case "Critical": return "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300";
+    case "None": return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-100";
+    case "Low": return "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200";
+    case "Medium": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-200";
+    case "High": return "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200";
+    case "Critical": return "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200";
   }
 }
 

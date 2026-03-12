@@ -143,7 +143,7 @@ export async function getCustomersForSelectAction() {
 
   try {
     const data = await db
-      .select({ id: customers.id, name: customers.name })
+      .select({ id: customers.id, name: customers.name, code: customers.code })
       .from(customers)
       .orderBy(customers.name);
 

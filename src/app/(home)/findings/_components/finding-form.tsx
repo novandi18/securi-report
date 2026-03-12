@@ -11,6 +11,7 @@ import { MarkdownEditor } from "@/components/markdown-editor";
 import { CvssInput } from "@/components/FormElements/cvss-calculator";
 import { AttachmentDropzone, type AttachmentFile } from "@/components/FormElements/attachment-dropzone";
 import type { ActionResult } from "@/lib/actions/report";
+import { isDevClient } from "@/lib/env";
 
 // ─── Severity → single letter map ───
 const SEVERITY_LETTER: Record<string, string> = {
@@ -22,7 +23,7 @@ const SEVERITY_LETTER: Record<string, string> = {
 };
 
 interface FindingFormProps {
-  customers: { id: string; name: string }[];
+  customers: { id: string; name: string; code: string }[];
   serverAction: (
     prevState: ActionResult | null,
     formData: FormData,
@@ -72,27 +73,48 @@ export default function FindingForm({
   const fieldErrors = state?.fieldErrors;
 
   const v = state?.values;
+  // ─── Dev dummy data ───
+  const devDefaults = isDevClient && !v ? {
+    title: "Sensitive Information Disclosure via Unauthenticated SMB Null Session",
+    serviceAffected: "SMB",
+    findingSequence: "1",
+    severity: "High",
+    location: "192.1.2.95 - H2H/API Server CIRT KSEI",
+    description: "Berdasarkan hasil Pemindaian menggunakan Nmap mengungkap adanya port 445 (microsoft-ds) yang aktif.\n\nMelakukan pengujian untuk melihat apakah server memberikan izin kepada siapa pun untuk melihat daftar folder di dalamnya tanpa perlu melakukan proses login.\n\nSetelah mendapatkan list direktori, tim mencoba masuk ke salah satu share yang terdeteksi untuk membuktikan bahwa file dapat diakses dan dibaca. Dengan perintah ls menampilkan ratusan file instalasi, dokumen backup, dan data operasional internal.",
+    referencesList: "- CWE-284 (Improper Access Control)\n- CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)",
+    cvssVector: "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+    impact: "- **Kebocoran Data Sensitif:** Tereksposnya data operasional perusahaan dan dokumen rahasia kepada pihak tidak berwenang.\n\n- **Pencurian Kredensial:** Penyerang dapat menemukan username, password, atau keys yang tertinggal di dalam file instalasi atau konfigurasi.\n\n- **Batu Loncatan Serangan (Lateral Movement):** Data yang didapat bisa digunakan sebagai pijakan awal untuk meretas layanan internal lain.\n\n- **Risiko Ransomware:** Jika ada folder yang mengizinkan akses modifikasi (_Write Access_), peretas dapat dengan mudah menanamkan malware atau mengenkripsi data.",
+    recommendation: "1.  **Blokir Akses Internet:** Segera tutup Port 445 (SMB) dan 139 di level firewall eksternal. Layanan ini tidak boleh terekspos langsung ke publik.\n2.  **Nonaktifkan Null Session:** Ubah konfigurasi _Registry_ atau _Group Policy (GPO) Windows_ untuk menolak akses masuk dari pengguna anonim atau tamu (_Guest_).\n3.  **Amankan Data Kritis:** Segera hapus atau pindahkan file sensitif (seperti data kependudukan, file instalasi, dan teks kredensial) dari folder publik (Data PC A, E, Users).",
+    status: "Open",
+  } : null;
+
   const val = {
     customerId: v?.customerId ?? "",
     reportIdCustom: v?.reportIdCustom ?? "",
-    title: v?.title ?? "",
+    title: v?.title ?? devDefaults?.title ?? "",
     clientCode: v?.clientCode ?? "",
-    serviceAffected: v?.serviceAffected ?? "",
-    findingSequence: v?.findingSequence ?? "",
-    severity: v?.severity ?? "Info",
-    location: v?.location ?? "",
-    description: v?.description ?? "",
+    serviceAffected: v?.serviceAffected ?? devDefaults?.serviceAffected ?? "",
+    findingSequence: v?.findingSequence ?? devDefaults?.findingSequence ?? "",
+    severity: v?.severity ?? devDefaults?.severity ?? "Info",
+    location: v?.location ?? devDefaults?.location ?? "",
+    description: v?.description ?? devDefaults?.description ?? "",
     pocText: v?.pocText ?? "",
-    referencesList: v?.referencesList ?? "",
-    cvssVector: v?.cvssVector ?? "",
+    referencesList: v?.referencesList ?? devDefaults?.referencesList ?? "",
+    cvssVector: v?.cvssVector ?? devDefaults?.cvssVector ?? "",
     cvssScore: v?.cvssScore ?? "",
-    impact: v?.impact ?? "",
-    recommendation: v?.recommendation ?? "",
-    status: v?.status ?? "Draft",
+    impact: v?.impact ?? devDefaults?.impact ?? "",
+    recommendation: v?.recommendation ?? devDefaults?.recommendation ?? "",
+    status: v?.status ?? devDefaults?.status ?? "Draft",
   };
 
   // ─── Issue Reference Builder (React state) ───
-  const [clientCode, setClientCode] = useState(val.clientCode);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(val.customerId);
+  const customerCodeMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const c of customers) map[c.id] = c.code;
+    return map;
+  }, [customers]);
+  const clientCode = selectedCustomerId ? (customerCodeMap[selectedCustomerId] ?? "") : "";
   const [severity, setSeverity] = useState(val.severity);
   const [serviceAffected, setServiceAffected] = useState(val.serviceAffected);
   const [findingSeq, setFindingSeq] = useState(val.findingSequence);
@@ -147,23 +169,17 @@ export default function FindingForm({
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-              Client Code <span className="text-red-500">*</span>
+              Client Code
             </label>
             <input
               type="text"
               name="clientCode"
-              maxLength={10}
-              placeholder="e.g. TF"
+              readOnly
               value={clientCode}
-              onChange={(e) => {
-                setClientCode(e.target.value);
-                markDirty();
-              }}
-              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-sm uppercase text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:text-white"
+              placeholder="Select a customer"
+              className="w-full rounded-lg border border-stroke bg-gray-1 px-4 py-2.5 text-sm uppercase text-dark outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white cursor-not-allowed"
             />
-            {fieldErrors?.clientCode && (
-              <p className="mt-1 text-xs text-red-500">{fieldErrors.clientCode[0]}</p>
-            )}
+            <p className="mt-1 text-xs text-dark-5 dark:text-dark-6">Auto-filled from selected customer</p>
           </div>
 
           <div>
@@ -237,14 +253,24 @@ export default function FindingForm({
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div>
-            <Select
-              label="Customer"
+            <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+              Customer <span className="text-red-500">*</span>
+            </label>
+            <select
               name="customerId"
               required
-              placeholder="Select a customer"
-              defaultValue={val.customerId}
-              items={customerOptions}
-            />
+              value={selectedCustomerId}
+              onChange={(e) => {
+                setSelectedCustomerId(e.target.value);
+                markDirty();
+              }}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-sm text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:bg-gray-dark dark:text-white"
+            >
+              <option value="">Select a customer</option>
+              {customerOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
             {fieldErrors?.customerId && (
               <p className="mt-1 text-xs text-red-500">{fieldErrors.customerId[0]}</p>
             )}
@@ -399,17 +425,17 @@ export default function FindingForm({
         />
       </div>
 
-      {/* ─── Section 7: Recommendation (Markdown) ─── */}
+      {/* ─── Section 7: Remediation ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
-          Recommendation
+          Remediation
         </h3>
         <MarkdownEditor
           label=""
           name="recommendation"
           defaultValue={val.recommendation}
           height="200px"
-          placeholder="Provide remediation recommendations in Markdown..."
+          placeholder="Provide remediation steps in Markdown..."
           error={fieldErrors?.recommendation?.[0]}
         />
       </div>
