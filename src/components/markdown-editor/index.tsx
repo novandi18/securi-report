@@ -9,6 +9,13 @@ import { AIShimmerBar } from "@/components/ui/ai-skeleton";
 import type { EditorState } from "@/lib/markdown-helpers";
 import { insertBold, insertItalic } from "@/lib/markdown-helpers";
 
+/* ─── Local file map type ─────────────────────── */
+
+interface LocalFile {
+  fileName: string;
+  blobUrl: string;
+}
+
 /* ─── Props ─────────────────────────────────────────── */
 
 interface MarkdownEditorProps {
@@ -24,6 +31,8 @@ interface MarkdownEditorProps {
   error?: string;
   /** Uploaded attachments for resolving ![upload]["filename"] references in preview */
   attachments?: { fileName: string; fileUrl: string }[];
+  /** Called when an image is uploaded via toolbar — adds to parent's shared attachments */
+  onAttachmentAdd?: (file: { id: string; fileUrl: string; fileName: string; fileSize: number; mimeType: string }) => void;
 }
 
 /* ─── Constants ─────────────────────────────────────── */
@@ -43,6 +52,7 @@ export function MarkdownEditor({
   placeholder = "Enter Markdown content...",
   error,
   attachments,
+  onAttachmentAdd,
 }: MarkdownEditorProps) {
   // Support both controlled and uncontrolled usage
   const isControlled = controlledValue !== undefined;
@@ -57,6 +67,20 @@ export function MarkdownEditor({
   const initialHeight = parseInt(height, 10);
   const [editorHeight, setEditorHeight] = useState(
     isNaN(initialHeight) ? 300 : Math.max(MIN_HEIGHT, initialHeight),
+  );
+
+  // Local files picked via toolbar image button (fileName → blobUrl)
+  const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
+
+  const handleLocalImageInsert = useCallback(
+    (fileName: string, blobUrl: string) => {
+      setLocalFiles((prev) => {
+        // Replace if same fileName already exists
+        const filtered = prev.filter((f) => f.fileName !== fileName);
+        return [...filtered, { fileName, blobUrl }];
+      });
+    },
+    [],
   );
 
   const updateValue = useCallback(
@@ -244,7 +268,7 @@ export function MarkdownEditor({
           ref={containerRef}
           className="relative rounded-lg border border-gray-300 dark:border-slate-700"
         >
-          <Toolbar getState={getEditorState} applyState={applyEditorState} />
+          <Toolbar getState={getEditorState} applyState={applyEditorState} onLocalImageInsert={handleLocalImageInsert} onAttachmentAdd={onAttachmentAdd} />
           <textarea
             ref={textareaRef}
             value={currentValue}
@@ -276,7 +300,7 @@ export function MarkdownEditor({
       {tab === "split" && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="relative rounded-lg border border-gray-300 dark:border-slate-700">
-            <Toolbar getState={getEditorState} applyState={applyEditorState} />
+            <Toolbar getState={getEditorState} applyState={applyEditorState} onLocalImageInsert={handleLocalImageInsert} onAttachmentAdd={onAttachmentAdd} />
             <textarea
               ref={textareaRef}
               value={currentValue}
@@ -303,12 +327,12 @@ export function MarkdownEditor({
               <div className="h-0.5 w-8 rounded-full bg-gray-400 dark:bg-slate-600" />
             </div>
           </div>
-          <MarkdownPreview content={currentValue} height={`${editorHeight}px`} attachments={attachments} />
+          <MarkdownPreview content={currentValue} height={`${editorHeight}px`} attachments={attachments} localFiles={localFiles} />
         </div>
       )}
 
       {tab === "preview" && (
-        <MarkdownPreview content={currentValue} height={`${editorHeight}px`} attachments={attachments} />
+        <MarkdownPreview content={currentValue} height={`${editorHeight}px`} attachments={attachments} localFiles={localFiles} />
       )}
 
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}

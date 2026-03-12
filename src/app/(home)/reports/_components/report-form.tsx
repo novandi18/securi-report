@@ -66,6 +66,22 @@ export default function ReportForm({
   // Attachment state
   const [attachments, setAttachments] = useState<AttachmentFile[]>(initialAttachments);
 
+  // Attachment metadata for markdown editor preview
+  const attachmentsMeta = useMemo(
+    () => attachments.map((a) => ({ fileName: a.fileName, fileUrl: a.fileUrl })),
+    [attachments],
+  );
+
+  const handleAttachmentAdd = useCallback(
+    (file: { id: string; fileUrl: string; fileName: string; fileSize: number; mimeType: string }) => {
+      setAttachments((prev) => {
+        if (prev.some((a) => a.fileName === file.fileName)) return prev;
+        return [...prev, file];
+      });
+    },
+    [],
+  );
+
   const [state, formAction, pending] = useActionState<
     ActionResult | null,
     FormData
@@ -387,6 +403,8 @@ export default function ReportForm({
           height="250px"
           placeholder="Describe the vulnerability finding in Markdown..."
           error={fieldErrors?.description?.[0]}
+          attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
       </div>
 
@@ -402,6 +420,8 @@ export default function ReportForm({
           height="200px"
           placeholder="Step-by-step proof of concept in Markdown..."
           error={fieldErrors?.pocText?.[0]}
+          attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
 
         <div className="mt-6">
@@ -428,6 +448,8 @@ export default function ReportForm({
           height="200px"
           placeholder="Describe the impact of this vulnerability..."
           error={fieldErrors?.impact?.[0]}
+          attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
       </div>
 
@@ -443,6 +465,8 @@ export default function ReportForm({
           height="200px"
           placeholder="Provide remediation recommendations in Markdown..."
           error={fieldErrors?.recommendation?.[0]}
+          attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
       </div>
 
@@ -458,6 +482,8 @@ export default function ReportForm({
           height="150px"
           placeholder="CWE/OWASP references in Markdown..."
           error={fieldErrors?.referencesList?.[0]}
+          attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
       </div>
 

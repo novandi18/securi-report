@@ -240,6 +240,21 @@ export function insertImage(state: EditorState, imagePath: string, alt = "image"
   return { text: newText, selectionStart: cursorPos, selectionEnd: cursorPos };
 }
 
+// ─── Upload Reference ![upload]["filename"] ────────────────
+
+export function insertUploadReference(state: EditorState, fileName: string): EditorState {
+  const { text, selectionStart, selectionEnd } = state;
+  const before = text.slice(0, selectionStart);
+  const after = text.slice(selectionEnd);
+
+  const ensureNewline = before.length > 0 && !before.endsWith("\n") ? "\n" : "";
+  const cmd = `${ensureNewline}![upload]["${fileName}"]\n`;
+  const newText = before + cmd + after;
+  const cursorPos = before.length + cmd.length;
+
+  return { text: newText, selectionStart: cursorPos, selectionEnd: cursorPos };
+}
+
 // ─── Task / Checkbox List (- [ ] item) ──────────────────
 
 export function insertTaskList(state: EditorState): EditorState {

@@ -17,8 +17,10 @@ import {
   Superscript,
   Subscript,
   Hash,
+  ImagePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { uploadTempAttachmentAction } from "@/lib/actions/attachment";
 import type { EditorState } from "@/lib/markdown-helpers";
 import {
   insertBold,
@@ -37,6 +39,7 @@ import {
   insertSymbol,
   insertSuperscript,
   insertSubscript,
+  insertUploadReference,
 } from "@/lib/markdown-helpers";
 
 /* ───── Types ─────────────────────────────────────── */
@@ -44,6 +47,10 @@ import {
 export interface ToolbarProps {
   getState: () => EditorState;
   applyState: (next: EditorState) => void;
+  /** Called when user selects a local image file for insertion */
+  onLocalImageInsert?: (fileName: string, blobUrl: string) => void;
+  /** Called when image is uploaded to server via toolbar button */
+  onAttachmentAdd?: (file: { id: string; fileUrl: string; fileName: string; fileSize: number; mimeType: string }) => void;
 }
 
 interface ToolbarBtnProps {
@@ -291,6 +298,83 @@ function TableButton({
 }
 
 /* ═══════════════════════════════════════════════════
+   Image Upload Button
+   ═══════════════════════════════════════════════════ */
+
+const IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
+const IMAGE_MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
+function ImageUploadButton({
+  getState,
+  applyState,
+  onLocalImageInsert,
+  onAttachmentAdd,
+}: {
+  getState: () => EditorState;
+  applyState: (s: EditorState) => void;
+  onLocalImageInsert?: (fileName: string, blobUrl: string) => void;
+  onAttachmentAdd?: (file: { id: string; fileUrl: string; fileName: string; fileSize: number; mimeType: string }) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!IMAGE_ALLOWED_TYPES.includes(file.type)) {
+        return;
+      }
+      if (file.size > IMAGE_MAX_SIZE) {
+        return;
+      }
+
+      // Create blob URL for instant local preview in this editor
+      const blobUrl = URL.createObjectURL(file);
+      onLocalImageInsert?.(file.name, blobUrl);
+
+      // Insert ![upload]["filename"] into the editor
+      applyState(insertUploadReference(getState(), file.name));
+
+      // Reset input so the same file can be selected again
+      e.target.value = "";
+
+      // Upload to server so all editors can resolve the reference
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const result = await uploadTempAttachmentAction(fd);
+        if (result.success && result.data) {
+          onAttachmentAdd?.(result.data);
+        }
+      } finally {
+        setUploading(false);
+      }
+    },
+    [getState, applyState, onLocalImageInsert, onAttachmentAdd],
+  );
+
+  return (
+    <>
+      <ToolbarBtn
+        icon={uploading ? <span className="animate-spin">⏳</span> : <ImagePlus size={15} />}
+        tooltip={uploading ? "Uploading..." : "Insert Image from File"}
+        onClick={() => !uploading && fileRef.current?.click()}
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".jpg,.jpeg,.png"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
    List Dropdown (all list types)
    ═══════════════════════════════════════════════════ */
 
@@ -482,7 +566,7 @@ function SymbolDropdown({
    Main Toolbar
    ═══════════════════════════════════════════════════ */
 
-export default function Toolbar({ getState, applyState }: ToolbarProps) {
+export default function Toolbar({ getState, applyState, onLocalImageInsert, onAttachmentAdd }: ToolbarProps) {
   const act = useCallback(
     (fn: (s: EditorState) => EditorState) => {
       applyState(fn(getState()));
@@ -556,6 +640,9 @@ export default function Toolbar({ getState, applyState }: ToolbarProps) {
 
       {/* Link */}
       <LinkButton getState={getState} applyState={applyState} />
+
+      {/* Image Upload */}
+      <ImageUploadButton getState={getState} applyState={applyState} onLocalImageInsert={onLocalImageInsert} onAttachmentAdd={onAttachmentAdd} />
 
       <Divider />
 

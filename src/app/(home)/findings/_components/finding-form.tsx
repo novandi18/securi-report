@@ -144,6 +144,16 @@ export default function FindingForm({
     [attachments],
   );
 
+  const handleAttachmentAdd = useCallback(
+    (file: { id: string; fileUrl: string; fileName: string; fileSize: number; mimeType: string }) => {
+      setAttachments((prev) => {
+        if (prev.some((a) => a.fileName === file.fileName)) return prev;
+        return [...prev, file];
+      });
+    },
+    [],
+  );
+
   return (
     <form key={formKey} action={formAction} className="space-y-8" onChange={markDirty}>
       <input type="hidden" name="issueReferenceNumber" value={issueReferenceNumber} />
@@ -406,6 +416,7 @@ export default function FindingForm({
           placeholder={'Describe the vulnerability finding in Markdown...\n\nTo embed an uploaded image:\n![upload]["SMB login.png"]'}
           error={fieldErrors?.description?.[0]}
           attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
       </div>
 
@@ -422,6 +433,7 @@ export default function FindingForm({
           placeholder="Describe the impact of this vulnerability..."
           error={fieldErrors?.impact?.[0]}
           attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
       </div>
 
@@ -437,6 +449,8 @@ export default function FindingForm({
           height="200px"
           placeholder="Provide remediation steps in Markdown..."
           error={fieldErrors?.recommendation?.[0]}
+          attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
       </div>
 
@@ -452,6 +466,8 @@ export default function FindingForm({
           height="150px"
           placeholder="CWE/OWASP references in Markdown..."
           error={fieldErrors?.referencesList?.[0]}
+          attachments={attachmentsMeta}
+          onAttachmentAdd={handleAttachmentAdd}
         />
       </div>
 

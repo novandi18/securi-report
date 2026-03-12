@@ -23,6 +23,7 @@ export function markdownToHtml(input: string): string {
     return DOMPurify.sanitize(rawHtml, {
       ADD_TAGS: ["figure", "figcaption", "input"],
       ADD_ATTR: ["target", "type", "checked", "disabled"],
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|blob|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     });
   }
 
