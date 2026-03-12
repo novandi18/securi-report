@@ -6,6 +6,32 @@ import { markdownToHtml } from "@/lib/markdown-to-html";
 interface MarkdownPreviewProps {
   content: string;
   height?: string;
+  /** Uploaded attachments for resolving ![upload]["filename"] references */
+  attachments?: { fileName: string; fileUrl: string }[];
+}
+
+/**
+ * Resolve `![upload]["filename.png"]` references in markdown content
+ * by replacing them with standard markdown image syntax pointing to the upload URL.
+ */
+function resolveUploadReferences(
+  content: string,
+  attachments: { fileName: string; fileUrl: string }[],
+): string {
+  // Match ![upload]["filename.ext"] pattern
+  return content.replace(
+    /!\[upload\]\["([^"]+)"\]/g,
+    (_match, fileName: string) => {
+      const att = attachments.find(
+        (a) => a.fileName === fileName,
+      );
+      if (att) {
+        return `![${fileName}](${att.fileUrl})`;
+      }
+      // Keep original text with a visual indicator that the file wasn't found
+      return `![⚠ File not found: ${fileName}]()`;
+    },
+  );
 }
 
 /**
@@ -18,22 +44,27 @@ interface MarkdownPreviewProps {
  * - Tables: GFM tables
  * - Links: [text](url)
  * - Images: ![alt](url)
+ * - Upload references: ![upload]["filename.png"]
  * - Code blocks: ```language ... ```
  * - Blockquotes: > text
  * - Horizontal rules: ---
  */
-export function MarkdownPreview({ content, height = "200px" }: MarkdownPreviewProps) {
+export function MarkdownPreview({ content, height = "200px", attachments }: MarkdownPreviewProps) {
   const rendered = useMemo(() => {
     if (!content.trim()) {
       return '<span class="text-dark-5 dark:text-dark-6">Nothing to preview</span>';
     }
 
     try {
-      return markdownToHtml(content);
+      // Resolve upload references before converting to HTML
+      const resolved = attachments?.length
+        ? resolveUploadReferences(content, attachments)
+        : content;
+      return markdownToHtml(resolved);
     } catch {
       return `<span class="text-red-500">Error rendering Markdown</span>`;
     }
-  }, [content]);
+  }, [content, attachments]);
 
   return (
     <div

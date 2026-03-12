@@ -46,12 +46,19 @@ export const NAV_DATA: NavSection[] = [
         items: [],
       },
       {
+        title: "Findings",
+        icon: Icons.FindingsIcon,
+        items: [
+          { title: "All Findings", url: "/findings" },
+          { title: "New Finding", url: "/findings/new" },
+          { title: "New Finding with AI", url: "/findings/new-with-ai" },
+        ],
+      },
+      {
         title: "Reports",
         icon: Icons.PieChart,
         items: [
           { title: "All Reports", url: "/reports" },
-          { title: "Add Report", url: "/reports/create" },
-          { title: "Create with AI", url: "/reports/create-with-ai" },
           { title: "All Deliverables", url: "/reports/deliverables" },
         ],
       },

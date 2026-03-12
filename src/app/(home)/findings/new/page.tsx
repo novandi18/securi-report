@@ -2,26 +2,25 @@ import { redirect } from "next/navigation";
 import { Breadcrumb } from "@/components/Breadcrumbs/Breadcrumb";
 import { getCustomersForSelectAction, createReportAction } from "@/lib/actions/report";
 import { auth } from "@/lib/auth";
-import ReportForm from "../_components/report-form";
+import FindingForm from "../_components/finding-form";
 
 export const metadata = {
-  title: "Create Finding Report",
+  title: "New Finding",
 };
 
-export default async function CreateReportPage() {
+export default async function NewFindingPage() {
   const session = await auth();
 
-  // Viewer cannot create reports
   if (!session || session.user.role === "viewer") {
-    redirect("/reports");
+    redirect("/findings");
   }
 
   const customersResult = await getCustomersForSelectAction();
 
   return (
     <>
-      <Breadcrumb pageName="Create Finding Report" />
-      <ReportForm
+      <Breadcrumb pageName="New Finding" />
+      <FindingForm
         customers={customersResult.data}
         serverAction={createReportAction}
       />

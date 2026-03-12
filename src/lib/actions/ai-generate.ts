@@ -328,6 +328,11 @@ export interface SaveAIReportInput {
   scopeIssa1?: Issa1Target[] | null;
   scopeIssa2?: Issa2Target[] | null;
   scopeIssa3?: Issa3Target[] | null;
+  clientCode?: string;
+  serviceAffected?: string;
+  findingSequence?: number;
+  issueReferenceNumber?: string;
+  severity?: string;
 }
 
 export interface SaveAIReportResult {
@@ -385,11 +390,16 @@ export async function saveAIReport(
         reportIdCustom,
         title: input.title,
         description: input.markdownReport,
+        severity: (input.severity as "Critical" | "High" | "Medium" | "Low" | "Info") ?? "Info",
         status: input.status as "Open" | "Closed" | "Draft",
         createdBy: user.id,
         scopeIssa1: input.scopeIssa1 ?? undefined,
         scopeIssa2: input.scopeIssa2 ?? undefined,
         scopeIssa3: input.scopeIssa3 ?? undefined,
+        clientCode: input.clientCode || undefined,
+        serviceAffected: input.serviceAffected || undefined,
+        findingSequence: input.findingSequence || undefined,
+        issueReferenceNumber: input.issueReferenceNumber || undefined,
       });
 
       // Get the created report

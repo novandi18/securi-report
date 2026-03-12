@@ -22,6 +22,8 @@ interface MarkdownEditorProps {
   height?: string;
   placeholder?: string;
   error?: string;
+  /** Uploaded attachments for resolving ![upload]["filename"] references in preview */
+  attachments?: { fileName: string; fileUrl: string }[];
 }
 
 /* ─── Constants ─────────────────────────────────────── */
@@ -40,6 +42,7 @@ export function MarkdownEditor({
   height = "300px",
   placeholder = "Enter Markdown content...",
   error,
+  attachments,
 }: MarkdownEditorProps) {
   // Support both controlled and uncontrolled usage
   const isControlled = controlledValue !== undefined;
@@ -300,12 +303,12 @@ export function MarkdownEditor({
               <div className="h-0.5 w-8 rounded-full bg-gray-400 dark:bg-slate-600" />
             </div>
           </div>
-          <MarkdownPreview content={currentValue} height={`${editorHeight}px`} />
+          <MarkdownPreview content={currentValue} height={`${editorHeight}px`} attachments={attachments} />
         </div>
       )}
 
       {tab === "preview" && (
-        <MarkdownPreview content={currentValue} height={`${editorHeight}px`} />
+        <MarkdownPreview content={currentValue} height={`${editorHeight}px`} attachments={attachments} />
       )}
 
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}

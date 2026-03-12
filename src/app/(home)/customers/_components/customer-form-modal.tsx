@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import InputGroup from "@/components/FormElements/InputGroup";
+import { LogoUpload } from "@/components/FormElements/logo-upload";
 import type { Customer } from "@/lib/db/schema";
 import type { ActionResult } from "@/lib/actions/customer";
 
@@ -46,6 +47,13 @@ export default function CustomerFormModal({
     description: v?.description ?? customer?.description ?? "",
     logoUrl: v?.logoUrl ?? customer?.logoUrl ?? "",
   };
+
+  const [logoUrl, setLogoUrl] = useState(val.logoUrl);
+
+  // Sync logoUrl when modal opens with different customer or after error
+  useEffect(() => {
+    setLogoUrl(val.logoUrl);
+  }, [val.logoUrl]);
 
   // Key forces React to re-mount form inputs with updated defaultValue
   const formKey = state && !state.success ? `err-${Date.now()}` : `clean-${customer?.id ?? "new"}`;
@@ -116,18 +124,11 @@ export default function CustomerFormModal({
           </div>
 
           <div>
-            <InputGroup
-              label="Logo URL"
-              name="logoUrl"
-              type="text"
-              placeholder="https://example.com/logo.png"
-              defaultValue={val.logoUrl}
+            <LogoUpload
+              value={logoUrl}
+              onChange={setLogoUrl}
+              error={fieldErrors?.logoUrl?.[0]}
             />
-            {fieldErrors?.logoUrl && (
-              <p className="mt-1 text-xs text-red-500">
-                {fieldErrors.logoUrl[0]}
-              </p>
-            )}
           </div>
         </div>
 
