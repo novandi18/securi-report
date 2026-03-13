@@ -344,6 +344,7 @@ export interface SaveAIReportInput {
 export interface SaveAIReportResult {
   success: boolean;
   reportId?: string;
+  pdfUrl?: string;
   error?: string;
 }
 
@@ -461,6 +462,9 @@ export async function saveAIReport(
       const delivDir = path.join(process.cwd(), "public", "deliverables");
       await fs.mkdir(delivDir, { recursive: true });
 
+      const pdfFileName = `${reportIdCustom.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
+      const pdfFileUrl = `/deliverables/${pdfFileName}`;
+
       // Build markdown from individual fields for PDF
       const pdfMarkdown = input.description
         ? [
@@ -495,7 +499,6 @@ export async function saveAIReport(
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: "networkidle0" });
 
-        const pdfFileName = `${reportIdCustom.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
         const pdfPath = path.join(delivDir, pdfFileName);
 
         await page.pdf({
@@ -521,11 +524,10 @@ export async function saveAIReport(
         const sha256Hash = crypto.createHash("sha256").update(pdfBuffer).digest("hex");
 
         // Insert deliverable record
-        const fileUrl = `/deliverables/${pdfFileName}`;
         await db.insert(deliverables).values({
           reportId: created.id,
           format: "PDF",
-          fileUrl,
+          fileUrl: pdfFileUrl,
           sha256Hash,
           generatedBy: user.id,
         });
@@ -564,7 +566,7 @@ export async function saveAIReport(
       revalidatePath("/reports");
       revalidatePath("/reports/deliverables");
 
-      return { success: true, reportId: created.id };
+      return { success: true, reportId: created.id, pdfUrl: pdfFileUrl };
     } catch (error: any) {
       console.error("Save AI report error:", error);
 

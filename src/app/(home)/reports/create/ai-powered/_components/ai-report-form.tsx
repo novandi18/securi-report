@@ -18,6 +18,9 @@ import {
   Building2,
   Save,
   Loader2,
+  Download,
+  ExternalLink,
+  CheckCircle2,
 } from "lucide-react";
 import { marked } from "marked";
 import { cn } from "@/lib/utils";
@@ -43,7 +46,7 @@ interface AIReportFormProps {
   customers: { id: string; name: string; code: string }[];
 }
 
-type GenerationStep = "idle" | "generating" | "done" | "error";
+type GenerationStep = "idle" | "generating" | "done" | "error" | "saved";
 
 /* ─── Helpers ───────────────────────────────────────── */
 
@@ -105,6 +108,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const [errorMessage, setErrorMessage] = useState("");
   const [markdownReport, setMarkdownReport] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState("");
 
   // Structured AI output fields (matching manual finding form)
   const [aiDescription, setAiDescription] = useState("");
@@ -293,7 +297,13 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
       }
 
       addToast("Finding saved successfully!", "success");
-      router.push(`/findings`);
+
+      if (result.pdfUrl) {
+        setPdfUrl(result.pdfUrl);
+        setStep("saved");
+      } else {
+        router.push(`/findings`);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Save failed.";
       addToast(msg, "error");
@@ -864,6 +874,109 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                 )}
               </button>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════════════════════
+           SAVED STATE — PDF Viewer
+         ════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {step === "saved" && pdfUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-5"
+          >
+            {/* Success banner */}
+            <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50/80 p-5 backdrop-blur-sm dark:border-green-900/40 dark:bg-green-950/20">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                <CheckCircle2 size={20} className="text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  Finding saved successfully!
+                </p>
+                <p className="text-xs text-green-600/80 dark:text-green-400/70">
+                  Your AI-generated finding has been saved and the PDF report is ready below.
+                </p>
+              </div>
+            </div>
+
+            {/* PDF Viewer */}
+            <div className={cn(glassCard)}>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                    <FileText size={16} />
+                  </div>
+                  <h3 className="text-base font-semibold text-dark dark:text-white">
+                    Generated PDF Report
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-lg border border-stroke px-3 py-1.5 text-xs font-medium text-dark-5 transition-colors hover:bg-gray-2 dark:border-dark-3 dark:text-dark-6 dark:hover:bg-dark-3"
+                  >
+                    <ExternalLink size={14} />
+                    Open in New Tab
+                  </a>
+                  <a
+                    href={pdfUrl}
+                    download
+                    className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90"
+                  >
+                    <Download size={14} />
+                    Download
+                  </a>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border border-stroke/50 dark:border-dark-3/50">
+                <iframe
+                  src={pdfUrl}
+                  title="Generated PDF Report"
+                  className="h-[700px] w-full bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Navigation buttons */}
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("idle");
+                  setMarkdownReport("");
+                  setAiDescription("");
+                  setAiImpact("");
+                  setAiRecommendation("");
+                  setAiCvssVector("");
+                  setAiCvssScore("");
+                  setAiSeverity("");
+                  setAiLocation("");
+                  setAiReferencesList("");
+                  setPdfUrl("");
+                  setTitle("");
+                }}
+                className="rounded-lg border border-stroke px-6 py-2.5 text-sm font-medium text-dark transition-colors hover:bg-gray-2 dark:border-dark-3 dark:text-white dark:hover:bg-dark-3"
+              >
+                Create Another
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/findings")}
+                className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+              >
+                <ExternalLink size={16} />
+                View All Findings
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
