@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   calculateScore,
@@ -185,9 +185,10 @@ interface CvssInputProps {
   name: string;
   defaultValue?: string;
   error?: string;
+  onChange?: (vector: string, score: string, severity: string) => void;
 }
 
-export function CvssInput({ name, defaultValue, error }: CvssInputProps) {
+export function CvssInput({ name, defaultValue, error, onChange }: CvssInputProps) {
   const id = useId();
   const [expanded, setExpanded] = useState(false);
 
@@ -196,6 +197,10 @@ export function CvssInput({ name, defaultValue, error }: CvssInputProps) {
 
   const vectorString = useMemo(() => buildVector(metrics), [metrics]);
   const result = useMemo(() => calculateScore(metrics), [metrics]);
+
+  useEffect(() => {
+    onChange?.(vectorString, String(result.score), result.severity);
+  }, [vectorString, result.score, result.severity]);
 
   function handleChange(key: keyof CvssMetrics, value: string) {
     setMetrics((prev) => ({ ...prev, [key]: value }));
@@ -219,13 +224,9 @@ export function CvssInput({ name, defaultValue, error }: CvssInputProps) {
       <input type="hidden" name={name} value={vectorString} />
 
       {/* Score display & vector string */}
-      <div className="flex flex-col gap-4 rounded-lg border border-stroke bg-gray-1 p-4 dark:border-dark-3 dark:bg-dark-2 sm:flex-row sm:items-center sm:justify-between">
-        <ScoreBadge score={result.score} severity={result.severity} />
-
-        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
-          <code className="rounded-md border border-stroke bg-white px-3 py-2 font-mono text-[10px] text-dark dark:border-dark-3 dark:bg-dark-3 dark:text-white sm:text-xs">
-            {vectorString}
-          </code>
+      <div className="flex flex-col gap-3 rounded-lg border border-stroke bg-gray-1 p-4 dark:border-dark-3 dark:bg-dark-2">
+        <div className="flex items-center justify-between gap-3">
+          <ScoreBadge score={result.score} severity={result.severity} />
           <button
             type="button"
             onClick={() => setExpanded((p) => !p)}
@@ -234,6 +235,10 @@ export function CvssInput({ name, defaultValue, error }: CvssInputProps) {
             {expanded ? "Collapse" : "Edit Metrics"}
           </button>
         </div>
+
+        <code className="block w-full overflow-x-auto rounded-md border border-stroke bg-white px-3 py-2 font-mono text-[10px] text-dark dark:border-dark-3 dark:bg-dark-3 dark:text-white sm:text-xs">
+          {vectorString}
+        </code>
       </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}

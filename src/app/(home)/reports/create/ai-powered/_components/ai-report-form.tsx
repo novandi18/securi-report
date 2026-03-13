@@ -26,6 +26,7 @@ import { useToast } from "@/components/ui/toast";
 import { Select } from "@/components/FormElements/select";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { AIAttachmentZone, type PoCImage } from "@/components/FormElements/ai-attachment-zone";
+import { CvssInput } from "@/components/FormElements/cvss-calculator";
 import { MagicButton } from "@/components/ui/magic-button";
 import {
   AISkeleton,
@@ -87,9 +88,16 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     findingSequence: "1",
     severity: "High",
     scopeName: "192.1.2.95 - H2H/API Server CIRT KSEI",
+    cvssVector: "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+    customerName: "PT Profindo Sekuritas Indonesia",
     aiContext: "Berdasarkan hasil Pemindaian menggunakan Nmap mengungkap adanya port 445 (microsoft-ds) yang aktif.\n\nMelakukan pengujian untuk melihat apakah server memberikan izin kepada siapa pun untuk melihat daftar folder di dalamnya tanpa perlu melakukan proses login.\n\nSetelah mendapatkan list direktori, tim mencoba masuk ke salah satu share yang terdeteksi untuk membuktikan bahwa file dapat diakses dan dibaca. Dengan perintah ls menampilkan ratusan file instalasi, dokumen backup, dan data operasional internal.",
     status: "Open",
   } : null;
+
+  // Auto-select customer by name in dev mode
+  const devCustomerId = devDefaults
+    ? customers.find((c) => c.name === devDefaults.customerName)?.id ?? ""
+    : "";
 
   /* ── State ── */
   const [step, setStep] = useState<GenerationStep>("idle");
@@ -111,15 +119,20 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   // Identity & Metadata
   const [title, setTitle] = useState(devDefaults?.title ?? "");
   const [reportId] = useState(generatePenDocId);
-  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState(devCustomerId);
   const [selectedStatus, setSelectedStatus] = useState(devDefaults?.status ?? "Open");
 
   // AI Raw Input
   const [aiContext, setAiContext] = useState(devDefaults?.aiContext ?? "");
   const [pocImages, setPocImages] = useState<PoCImage[]>([]);
 
-  // Scope
+  // Scope / Affected Module
   const [scopeName, setScopeName] = useState(devDefaults?.scopeName ?? "");
+
+  // CVSS Vector (user input from CvssInput component)
+  const [cvssVector, setCvssVector] = useState(devDefaults?.cvssVector ?? "");
+  const [cvssScore, setCvssScore] = useState("");
+  const [cvssSeverity, setCvssSeverity] = useState("");
 
   // Issue Reference Builder
   const customerCodeMap = useMemo(() => {
@@ -131,6 +144,14 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const [refSeverity, setRefSeverity] = useState(devDefaults?.severity ?? "Info");
   const [serviceAffected, setServiceAffected] = useState(devDefaults?.serviceAffected ?? "");
   const [findingSeq, setFindingSeq] = useState(devDefaults?.findingSequence ?? "");
+
+  const handleCvssChange = useCallback((vector: string, score: string, severity: string) => {
+    setCvssVector(vector);
+    setCvssScore(score);
+    setCvssSeverity(severity);
+    // Sync severity to issue reference builder
+    if (severity) setRefSeverity(severity);
+  }, []);
 
   const SEVERITY_LETTER: Record<string, string> = {
     Critical: "C", High: "H", Medium: "M", Low: "L", Info: "I",
@@ -256,12 +277,12 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
         serviceAffected: serviceAffected.trim() || undefined,
         findingSequence: findingSeq ? parseInt(findingSeq, 10) || undefined : undefined,
         issueReferenceNumber: issueReferenceNumber || undefined,
-        severity: aiSeverity || refSeverity,
-        // Individual finding fields from AI
+        severity: cvssSeverity || aiSeverity || refSeverity,
+        // Individual finding fields from AI (user CVSS input takes priority)
         description: aiDescription || undefined,
-        location: aiLocation || undefined,
-        cvssVector: aiCvssVector || undefined,
-        cvssScore: aiCvssScore || undefined,
+        location: aiLocation || scopeName || undefined,
+        cvssVector: cvssVector || aiCvssVector || undefined,
+        cvssScore: cvssScore || aiCvssScore || undefined,
         impact: aiImpact || undefined,
         recommendation: aiRecommendation || undefined,
         referencesList: aiReferencesList || undefined,
@@ -279,7 +300,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     } finally {
       setSaving(false);
     }
-  }, [markdownReport, aiDescription, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, addToast, router, clientCode, serviceAffected, findingSeq, issueReferenceNumber, refSeverity, aiSeverity, aiLocation, aiCvssVector, aiCvssScore, aiImpact, aiRecommendation, aiReferencesList]);
+  }, [markdownReport, aiDescription, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, addToast, router, clientCode, serviceAffected, findingSeq, issueReferenceNumber, refSeverity, cvssSeverity, aiSeverity, aiLocation, scopeName, cvssVector, cvssScore, aiCvssVector, aiCvssScore, aiImpact, aiRecommendation, aiReferencesList]);
 
   /* ── Glass card helper ── */
   const glassCard = cn(
@@ -343,24 +364,25 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               name="customerId"
               placeholder="Select a customer"
               items={customerOptions}
+              defaultValue={devCustomerId}
               onChange={setSelectedCustomerId}
             />
 
-            {/* Report ID */}
+            {/* Finding ID */}
             <InputGroup
-              label="Report ID"
+              label="Finding ID"
               name="reportIdCustom"
               type="text"
               placeholder="PEN-DOC-YYYYMMDDHHmm"
               defaultValue={reportId}
             />
 
-            {/* Report Title */}
+            {/* Issue Title */}
             <InputGroup
-              label="Report Title"
+              label="Issue Title"
               name="title"
               type="text"
-              placeholder="e.g. Web App Pentest — Acme Corp"
+              placeholder="e.g. SQL Injection on Login Page"
               required
               value={title}
               handleChange={(e) => setTitle(e.target.value)}
@@ -370,7 +392,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
             <Select
               label="Status"
               name="status"
-              defaultValue="Open"
+              defaultValue={devDefaults?.status ?? "Open"}
               onChange={setSelectedStatus}
               items={[
                 { value: "Open", label: "Open" },
@@ -378,12 +400,19 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               ]}
             />
 
-            {/* Scope */}
+            {/* CVSS 4.0 Score */}
+            <CvssInput
+              name="cvssVector"
+              defaultValue={devDefaults?.cvssVector}
+              onChange={handleCvssChange}
+            />
+
+            {/* Affected Module */}
             <InputGroup
-              label="Scope"
+              label="Affected Module"
               name="scope"
               type="text"
-              placeholder="e.g. Back Office Server (DC)"
+              placeholder="e.g. 192.1.2.95 - H2H/API Server CIRT KSEI"
               value={scopeName}
               handleChange={(e) => setScopeName(e.target.value)}
             />
