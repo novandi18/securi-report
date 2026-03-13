@@ -408,35 +408,7 @@ export default function ReportForm({
         />
       </div>
 
-      {/* ─── Section 5: Proof of Concept ─── */}
-      <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
-        <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
-          Proof of Concept
-        </h3>
-        <MarkdownEditor
-          label="PoC Steps / Text"
-          name="pocText"
-          defaultValue={val.pocText}
-          height="200px"
-          placeholder="Step-by-step proof of concept in Markdown..."
-          error={fieldErrors?.pocText?.[0]}
-          attachments={attachmentsMeta}
-          onAttachmentAdd={handleAttachmentAdd}
-        />
-
-        <div className="mt-6">
-          <h4 className="mb-3 text-sm font-medium text-dark dark:text-white">
-            PoC Images / Attachments
-          </h4>
-          <AttachmentDropzone
-            attachments={attachments}
-            onChange={setAttachments}
-          />
-          <input type="hidden" name="attachmentsJson" value={JSON.stringify(attachments)} />
-        </div>
-      </div>
-
-      {/* ─── Section 6: Impact (Markdown) ─── */}
+      {/* ─── Section 5: Impact (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Impact
@@ -453,7 +425,7 @@ export default function ReportForm({
         />
       </div>
 
-      {/* ─── Section 7: Recommendation (Markdown) ─── */}
+      {/* ─── Section 6: Recommendation (Markdown) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           Recommendation
@@ -470,7 +442,7 @@ export default function ReportForm({
         />
       </div>
 
-      {/* ─── Section 8: References (CWE/OWASP) ─── */}
+      {/* ─── Section 7: References (CWE/OWASP) ─── */}
       <div className="rounded-xl border border-stroke bg-white p-6 shadow-1 dark:border-dark-3 dark:bg-gray-dark">
         <h3 className="mb-5 text-lg font-semibold text-dark dark:text-white">
           References
