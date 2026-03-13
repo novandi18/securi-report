@@ -129,7 +129,7 @@ async function readImageAsBase64(fileUrl: string): Promise<{ data: string; mimeT
 
 /**
  * Resolve ![upload]["filename.png"] references in markdown
- * to standard markdown image syntax with absolute file:// paths for PDF.
+ * to standard markdown image syntax with base64 data URIs for PDF rendering.
  */
 function resolveUploadRefsForPdf(
   content: string,
@@ -138,10 +138,19 @@ function resolveUploadRefsForPdf(
   return content.replace(
     /!\[upload\]\["([^"]+)"\]/g,
     (_match, fileName: string) => {
-      const absUrl = attachmentMap.get(fileName);
-      return absUrl ? `![${fileName}](${absUrl})` : `![${fileName}]()`;
+      const dataUri = attachmentMap.get(fileName);
+      return dataUri ? `![${fileName}](${dataUri})` : `![${fileName}]()`;
     },
   );
+}
+
+/**
+ * Read an image file and return its base64 data URI.
+ */
+async function readImageAsDataUri(fileUrl: string): Promise<string | null> {
+  const result = await readImageAsBase64(fileUrl);
+  if (!result) return null;
+  return `data:${result.mimeType};base64,${result.data}`;
 }
 
 /* ─── Server Action ─────────────────────────────────── */
@@ -487,13 +496,13 @@ export async function saveAIReport(
       const pdfFileName = `${reportIdCustom.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
       const pdfFileUrl = `/deliverables/${pdfFileName}`;
 
-      // Build attachment lookup for resolving ![upload]["file"] references
+      // Build attachment lookup for resolving ![upload]["file"] references as base64 data URIs
       const attachmentMap = new Map<string, string>();
       if (input.pocImages && input.pocImages.length > 0) {
         for (const img of input.pocImages) {
-          const absPath = path.join(process.cwd(), "public", img.fileUrl);
-          if (existsSync(absPath)) {
-            attachmentMap.set(img.fileName, `file://${absPath}`);
+          const dataUri = await readImageAsDataUri(img.fileUrl);
+          if (dataUri) {
+            attachmentMap.set(img.fileName, dataUri);
           }
         }
       }
@@ -528,7 +537,7 @@ export async function saveAIReport(
 
       const browser = await puppeteer.launch({
         headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox", "--allow-file-access-from-files"],
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
 
       try {
