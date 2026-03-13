@@ -1,5 +1,13 @@
-import { marked } from "marked";
+import { Marked } from "marked";
 import DOMPurify from "dompurify";
+
+/**
+ * A dedicated Marked instance so we never mutate global state.
+ */
+const md = new Marked({
+  breaks: true,
+  gfm: true,
+});
 
 /**
  * Convert Markdown text to sanitized HTML.
@@ -14,19 +22,13 @@ export function markdownToHtml(input: string): string {
   // so that `breaks: true` doesn't produce excessive <br> tags
   const normalized = input.replace(/\n{3,}/g, "\n\n");
 
-  // Configure marked for security
-  marked.setOptions({
-    breaks: true,
-    gfm: true,
-  });
-
-  const rawHtml = marked.parse(normalized, { async: false }) as string;
+  const rawHtml = md.parse(normalized, { async: false }) as string;
 
   // Sanitize HTML (only in browser where DOMPurify works)
   if (typeof window !== "undefined") {
     return DOMPurify.sanitize(rawHtml, {
       ADD_TAGS: ["figure", "figcaption", "input"],
-      ADD_ATTR: ["target", "type", "checked", "disabled"],
+      ADD_ATTR: ["target", "type", "checked", "disabled", "class"],
       ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|blob|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     });
   }

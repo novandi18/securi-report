@@ -19,6 +19,7 @@
     "@auth/drizzle-adapter": "^1.11.1",
     "@google/genai": "^1.41.0",
     "@monaco-editor/react": "^4.7.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/dompurify": "^3.0.5",
     "@types/katex": "^0.16.8",
     "@types/qrcode": "^1.5.6",

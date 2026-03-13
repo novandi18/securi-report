@@ -22,7 +22,7 @@ import {
   ExternalLink,
   CheckCircle2,
 } from "lucide-react";
-import { marked } from "marked";
+import { markdownToHtml } from "@/lib/markdown-to-html";
 import { cn } from "@/lib/utils";
 import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/components/ui/toast";
@@ -793,7 +793,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                   <div>
                     <h4 className="mb-2 text-sm font-semibold text-dark dark:text-white">Deskripsi</h4>
                     <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border border-stroke/50 bg-white/50 p-4 dark:border-dark-3/50 dark:bg-white/[0.02]">
-                      <div dangerouslySetInnerHTML={{ __html: marked.parse(aiDescription, { async: false }) as string }} />
+                      <div dangerouslySetInnerHTML={{ __html: markdownToHtml(aiDescription) }} />
                     </div>
                   </div>
                 )}
@@ -803,7 +803,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                   <div>
                     <h4 className="mb-2 text-sm font-semibold text-dark dark:text-white">Dampak</h4>
                     <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border border-stroke/50 bg-white/50 p-4 dark:border-dark-3/50 dark:bg-white/[0.02]">
-                      <div dangerouslySetInnerHTML={{ __html: marked.parse(aiImpact, { async: false }) as string }} />
+                      <div dangerouslySetInnerHTML={{ __html: markdownToHtml(aiImpact) }} />
                     </div>
                   </div>
                 )}
@@ -813,7 +813,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                   <div>
                     <h4 className="mb-2 text-sm font-semibold text-dark dark:text-white">Rekomendasi</h4>
                     <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border border-stroke/50 bg-white/50 p-4 dark:border-dark-3/50 dark:bg-white/[0.02]">
-                      <div dangerouslySetInnerHTML={{ __html: marked.parse(aiRecommendation, { async: false }) as string }} />
+                      <div dangerouslySetInnerHTML={{ __html: markdownToHtml(aiRecommendation) }} />
                     </div>
                   </div>
                 )}
@@ -823,7 +823,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                   <div>
                     <h4 className="mb-2 text-sm font-semibold text-dark dark:text-white">Referensi</h4>
                     <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border border-stroke/50 bg-white/50 p-4 dark:border-dark-3/50 dark:bg-white/[0.02]">
-                      <div dangerouslySetInnerHTML={{ __html: marked.parse(aiReferencesList, { async: false }) as string }} />
+                      <div dangerouslySetInnerHTML={{ __html: markdownToHtml(aiReferencesList) }} />
                     </div>
                   </div>
                 )}

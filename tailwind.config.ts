@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import defaultTheme from "tailwindcss/defaultTheme";
+import typography from "@tailwindcss/typography";
 
 const config: Config = {
   content: ["./src/**/*.{js,jsx,tsx}"],
@@ -387,6 +388,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [typography],
 };
 export default config;
