@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/resizable-table";
 import { deleteReportAction } from "@/lib/actions/report";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
+import { FileText, Pencil, Trash2 } from "lucide-react";
 
 export interface FindingRow {
   id: string;
@@ -344,32 +345,35 @@ export default function FindingsClient({ findings }: FindingsClientProps) {
                     </ResizableTableCell>
                     {canEditReports && (
                       <ResizableTableCell className="pr-5 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
                           {finding.pdfUrl && (
                             <a
                               href={finding.pdfUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="rounded-md px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-500/10 dark:text-emerald-400"
+                              title="View PDF"
+                              className="rounded-md p-1.5 text-emerald-600 transition-colors hover:bg-emerald-500/10 dark:text-emerald-400"
                             >
-                              View PDF
+                              <FileText size={16} />
                             </a>
                           )}
                           {canEdit(finding) && (
                             <Link
                               href={`/reports/${finding.id}/edit`}
-                              className="rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                              title="Edit"
+                              className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10"
                             >
-                              Edit
+                              <Pencil size={16} />
                             </Link>
                           )}
                           {canDelete(finding) && (
                             <button
                               type="button"
                               onClick={() => setDeleteTarget(finding)}
-                              className="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10"
+                              title="Delete"
+                              className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                             >
-                              Delete
+                              <Trash2 size={16} />
                             </button>
                           )}
                         </div>

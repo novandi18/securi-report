@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/hooks/use-role";
+import { Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -277,9 +278,10 @@ export default function FrameworksClient({
                               label: `CWE-${entry.id}`,
                             })
                           }
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10"
+                          title="Delete"
+                          className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                         >
-                          Delete
+                          <Trash2 size={16} />
                         </button>
                       </TableCell>
                     )}
@@ -367,9 +369,10 @@ export default function FrameworksClient({
                               label: entry.code,
                             })
                           }
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10"
+                          title="Delete"
+                          className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                         >
-                          Delete
+                          <Trash2 size={16} />
                         </button>
                       </TableCell>
                     )}

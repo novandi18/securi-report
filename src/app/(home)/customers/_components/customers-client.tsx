@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/hooks/use-role";
+import { Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -310,20 +311,22 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                   </TableCell>
                   {canEditCustomers && (
                     <TableCell className="pr-5 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <button
                           type="button"
                           onClick={() => handleEdit(customer)}
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                          title="Edit"
+                          className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10"
                         >
-                          Edit
+                          <Pencil size={16} />
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(customer)}
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10"
+                          title="Delete"
+                          className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                         >
-                          Delete
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </TableCell>

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/hooks/use-role";
+import { Pencil, KeyRound, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -443,30 +444,33 @@ export default function UsersClient({
                       : "—"}
                   </TableCell>
                   <TableCell className="pr-5 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1">
                       <button
                         type="button"
                         onClick={() => handleEdit(user)}
-                        className="rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                        title="Edit"
+                        className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10"
                       >
-                        Edit
+                        <Pencil size={16} />
                       </button>
                       {user.id !== currentUserId && user.role !== "administrator" && (
                         <button
                           type="button"
                           onClick={() => setResetTarget(user)}
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/10 dark:text-amber-400"
+                          title="Reset Password"
+                          className="rounded-md p-1.5 text-amber-600 transition-colors hover:bg-amber-500/10 dark:text-amber-400"
                         >
-                          Reset PW
+                          <KeyRound size={16} />
                         </button>
                       )}
                       {user.id !== currentUserId && user.role !== "administrator" && (
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(user)}
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10"
+                          title="Delete"
+                          className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                         >
-                          Delete
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </div>

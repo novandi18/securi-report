@@ -19,6 +19,7 @@ import {
 import { deleteReportAction } from "@/lib/actions/report";
 import { generateReportPDFAction } from "@/lib/actions/deliverable";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
+import { Pencil, FileDown, Trash2, Loader2 } from "lucide-react";
 
 export interface ReportRow {
   id: string;
@@ -333,30 +334,33 @@ export default function ReportsClient({ reports }: ReportsClientProps) {
                     </ResizableTableCell>
                     {canEditReports && (
                       <ResizableTableCell className="pr-5 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
                           {canEdit(report) && (
                             <Link
                               href={`/reports/${report.id}/edit`}
-                              className="rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                              title="Edit"
+                              className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10"
                             >
-                              Edit
+                              <Pencil size={16} />
                             </Link>
                           )}
                           <button
                             type="button"
                             onClick={() => handleGeneratePDF(report.id)}
                             disabled={pdfLoading === report.id}
-                            className="rounded-md px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-500/10 disabled:opacity-50"
+                            title="Generate PDF"
+                            className="rounded-md p-1.5 text-emerald-600 transition-colors hover:bg-emerald-500/10 disabled:opacity-50 dark:text-emerald-400"
                           >
-                            {pdfLoading === report.id ? "Generating\u2026" : "PDF"}
+                            {pdfLoading === report.id ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                           </button>
                           {canDelete(report) && (
                             <button
                               type="button"
                               onClick={() => setDeleteTarget(report)}
-                              className="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10"
+                              title="Delete"
+                              className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                             >
-                              Delete
+                              <Trash2 size={16} />
                             </button>
                           )}
                         </div>
