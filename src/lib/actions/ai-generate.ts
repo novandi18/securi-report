@@ -8,8 +8,14 @@ import fs from "fs/promises";
 import { GoogleGenAI, createUserContent } from "@google/genai";
 import { marked } from "marked";
 import puppeteer from "puppeteer";
+import {
+  buildFindingMarkdown,
+  buildFindingPdfShell,
+  resolveUploadRefsForPdf,
+} from "@/lib/pdf/finding-markdown";
 import { requireEditor, withAccessControl } from "@/lib/security";
 import { sanitizeMarkdown } from "@/lib/security/markdown-sanitizer";
+import { escapeHtml } from "@/lib/markdown-to-html";
 import { audit } from "@/lib/security/audit-logger";
 import { db } from "@/lib/db";
 import { reports, customers, deliverables, reportAttachments } from "@/lib/db/schema";
@@ -125,23 +131,6 @@ async function readImageAsBase64(fileUrl: string): Promise<{ data: string; mimeT
     data: buffer.toString("base64"),
     mimeType,
   };
-}
-
-/**
- * Resolve ![upload]["filename.png"] references in markdown
- * to standard markdown image syntax with base64 data URIs for PDF rendering.
- */
-function resolveUploadRefsForPdf(
-  content: string,
-  attachmentMap: Map<string, string>,
-): string {
-  return content.replace(
-    /!\[upload\]\["([^"]+)"\]/g,
-    (_match, fileName: string) => {
-      const dataUri = attachmentMap.get(fileName);
-      return dataUri ? `![${fileName}](${dataUri})` : `![${fileName}]()`;
-    },
-  );
 }
 
 /**
@@ -507,33 +496,29 @@ export async function saveAIReport(
         }
       }
 
-      // Build markdown from individual fields for PDF
-      const pdfMarkdownRaw = input.description
-        ? [
-            `# ${escapeHtml(input.title)}`,
-            `## Deskripsi\n\n${input.description}`,
-            input.location ? `**Lokasi:** ${input.location}` : "",
-            input.cvssVector ? `**CVSS Vector:** ${input.cvssVector}` : "",
-            input.cvssScore ? `**CVSS Score:** ${input.cvssScore} (${input.severity || "Info"})` : "",
-            input.impact ? `## Dampak\n\n${input.impact}` : "",
-            input.recommendation ? `## Rekomendasi\n\n${input.recommendation}` : "",
-            input.referencesList ? `## Referensi\n\n${input.referencesList}` : "",
-          ].filter(Boolean).join("\n\n")
-        : input.markdownReport;
+      // Synthesise standardised Markdown from structured fields
+      const pdfMarkdownRaw = buildFindingMarkdown({
+        issueReferenceNumber: input.issueReferenceNumber,
+        title: input.title,
+        location: input.location,
+        referencesList: input.referencesList,
+        cvssVector: input.cvssVector,
+        cvssScore: input.cvssScore,
+        severity: input.severity,
+        status: input.status,
+        description: input.description || input.markdownReport,
+        impact: input.impact,
+        recommendation: input.recommendation,
+        // Inline images in description are resolved below; no explicit attachments here
+      });
 
-      // Resolve ![upload]["filename"] → standard markdown images with absolute file:// paths
+      // Resolve ![upload]["filename"] → base64 data URIs
       const pdfMarkdown = resolveUploadRefsForPdf(pdfMarkdownRaw, attachmentMap);
 
-      const bodyHtml = await marked.parse(pdfMarkdown);
-
-      // Debug: verify markdown→HTML conversion
-      if (bodyHtml === pdfMarkdown || !bodyHtml.includes("<")) {
-        console.warn("WARNING: marked.parse() did not convert markdown to HTML properly.");
-        console.warn("Input length:", pdfMarkdown.length, "Output length:", bodyHtml.length);
-        console.warn("First 200 chars of output:", bodyHtml.substring(0, 200));
-      }
-
-      const html = buildAIReportPdfHtml(bodyHtml, input.title);
+      // Markdown → HTML → PDF shell
+      const bodyHtml = marked.parse(pdfMarkdown, { async: false }) as string;
+      const reportId = input.issueReferenceNumber || reportIdCustom;
+      const html = buildFindingPdfShell(bodyHtml, input.title, reportId || undefined);
 
       const browser = await puppeteer.launch({
         headless: true,
@@ -627,104 +612,4 @@ export async function saveAIReport(
   });
 }
 
-/* ─── HTML builder for AI Report PDF ─────────────────── */
 
-function buildAIReportPdfHtml(bodyHtml: string, title: string): string {
-  return `<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <style>
-    @page { margin: 20mm 15mm; }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      font-size: 11pt;
-      line-height: 1.6;
-      color: #1a1a2e;
-      padding: 0;
-    }
-
-    h1 { font-size: 18pt; color: #1a1a2e; margin-top: 28px; margin-bottom: 12px; border-bottom: 2px solid #5750F1; padding-bottom: 6px; }
-    h2 { font-size: 15pt; color: #1a1a2e; margin-top: 22px; margin-bottom: 10px; }
-    h3 { font-size: 13pt; color: #334155; margin-top: 18px; margin-bottom: 8px; }
-    h4 { font-size: 11pt; color: #475569; margin-top: 14px; margin-bottom: 6px; font-weight: 600; }
-
-    p { margin-bottom: 8px; text-align: justify; }
-
-    ul, ol { margin: 8px 0; padding-left: 24px; }
-    li { margin-bottom: 4px; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 12px 0;
-      font-size: 10pt;
-    }
-
-    th {
-      background: #f8fafc;
-      font-weight: 600;
-      text-align: left;
-      padding: 8px 12px;
-      border: 1px solid #e2e8f0;
-      color: #475569;
-    }
-
-    td {
-      padding: 8px 12px;
-      border: 1px solid #e2e8f0;
-    }
-
-    pre {
-      background: #1e1e2e;
-      color: #cdd6f4;
-      padding: 12px 16px;
-      border-radius: 6px;
-      overflow-x: auto;
-      font-size: 9pt;
-      margin: 8px 0;
-    }
-
-    code:not(pre code) {
-      background: #f1f5f9;
-      padding: 1px 5px;
-      border-radius: 3px;
-      font-size: 0.9em;
-    }
-
-    blockquote {
-      border-left: 3px solid #5750F1;
-      padding: 8px 16px;
-      margin: 12px 0;
-      color: #475569;
-      background: #f8fafc;
-    }
-
-    hr {
-      border: none;
-      border-top: 1px solid #e2e8f0;
-      margin: 16px 0;
-    }
-
-    a { color: #5750F1; text-decoration: underline; }
-    img { max-width: 100%; height: auto; margin: 8px 0; border-radius: 4px; }
-    strong { font-weight: 700; }
-    em { font-style: italic; }
-  </style>
-</head>
-<body>
-  ${bodyHtml}
-</body>
-</html>`;
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
