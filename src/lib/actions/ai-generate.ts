@@ -9,6 +9,7 @@ import { GoogleGenAI, createUserContent } from "@google/genai";
 import { marked } from "marked";
 import puppeteer from "puppeteer";
 import { requireEditor, withAccessControl } from "@/lib/security";
+import { sanitizeMarkdown } from "@/lib/security/markdown-sanitizer";
 import { audit } from "@/lib/security/audit-logger";
 import { db } from "@/lib/db";
 import { reports, customers, deliverables, reportAttachments } from "@/lib/db/schema";
@@ -40,103 +41,63 @@ export interface GenerateReportResult {
   success: boolean;
   data?: {
     markdownReport: string;
+    description: string;
+    impact: string;
+    recommendation: string;
+    cvssVector: string;
+    cvssScore: string;
+    severity: string;
+    location: string;
+    referencesList: string;
   };
   error?: string;
 }
 
-/* ─── System Instruction (shared with custom template) ── */
+/* ─── System Instruction for Structured Finding ── */
 
-const SYSTEM_INSTRUCTION = `# SYSTEM INSTRUCTION: PROFESSIONAL SECURITY REPORT GENERATOR (MARKDOWN)
+const SYSTEM_INSTRUCTION = `# SYSTEM INSTRUCTION: STRUCTURED SECURITY FINDING GENERATOR (JSON)
 
 ## CORE IDENTITY
 
-Anda adalah seorang ahli laporan keamanan siber (VAPT Reporting Expert). Tugas utama Anda adalah mentransformasikan data kerentanan (vulnerability data) mentah menjadi laporan VAPT dalam format **Markdown** yang profesional, terstruktur, dan bersih, mengikuti standar industri (seperti laporan IDXSTI/Stockbit).
+Anda adalah seorang ahli keamanan siber dan pentester profesional. Tugas Anda adalah menganalisis data kerentanan mentah dan menghasilkan output structured JSON yang berisi field-field temuan keamanan.
 
 ## OUTPUT FORMAT
 
-Output Anda HARUS selalu berupa kode Markdown tunggal. Fokus pada keterbacaan tinggi, penggunaan header yang tepat, dan tabel yang rapi. Jangan berikan penjelasan tambahan di luar blok Markdown kecuali diminta.
+Output Anda HARUS selalu berupa JSON valid tanpa code block wrapper, tanpa backtick, tanpa teks tambahan di luar JSON.
 
-## VISUAL & STYLING RULES (MANDATORY)
+## JSON SCHEMA
 
-1.  **Severity Color Codes (HEX):** Gunakan kode warna HEX berikut untuk identifikasi tingkat risiko:
+{
+  "description": "string (Markdown) — Deskripsi teknis lengkap tentang kerentanan",
+  "impact": "string (Markdown) — Analisis dampak keamanan dan bisnis",
+  "recommendation": "string (Markdown) — Langkah-langkah remediasi konkret",
+  "cvssVector": "string — CVSS 4.0 vector, contoh: CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+  "cvssScore": "string — Skor numerik CVSS, contoh: 8.7",
+  "severity": "string — Salah satu: Critical, High, Medium, Low, Info",
+  "location": "string — Lokasi/IP/URL/modul yang terpengaruh",
+  "referencesList": "string (Markdown) — Daftar referensi CWE/CVE terkait"
+}
 
-    -   **CRITICAL:** \`#990000\` (Skor 9.0 - 10.0)
-    -   **HIGH:** \`#FF0000\` (Skor 7.0 - 8.9)
-    -   **MEDIUM:** \`#FFCC00\` (Skor 4.0 - 6.9)
-    -   **LOW:** \`#00B050\` (Skor 0.1 - 3.9)
-    -   **INFORMATIONAL:** \`#0070C0\` (Skor 0.0)
+## FIELD RULES
 
-2.  **Page Break Marker (CRITICAL):**
-
-    Sama seperti laporan profesional atau skripsi, setiap bab baru harus dimulai di halaman baru. Anda WAJIB menyisipkan tag berikut tepat sebelum setiap **Header 2 (##)** (kecuali untuk Header 2 pertama setelah Title Page jika diperlukan):
-
-    \`<div style="page-break-after: always;"></div>\`
-
-3.  **Typography:**
-
-    -   Gunakan H1 (\`#\`) hanya untuk Judul Utama di Halaman Judul.
-    -   Gunakan H2 (\`##\`) untuk bab-bab utama.
-    -   Gunakan H3 (\`###\`) untuk sub-bab atau judul temuan spesifik.
-    -   Gunakan **Bold** untuk menekankan poin penting dan \`inline code\` untuk path/file/IP.
-
-4.  **Tables:** Selalu gunakan tabel Markdown untuk data terstruktur seperti Informasi Dokumen, Ruang Lingkup, dan Detail Temuan.
-
-## DOCUMENT STRUCTURE MANDATE
-
-Ikuti struktur laporan berikut secara presisi, pastikan tiap poin di bawah (mulai dari poin 2) didahului oleh penanda _Page Break_:
-
-1.  **Title Header (H1):** Judul besar, Nama Klien, Nama Perusahaan Penulis, dan Tanggal.
-
-2.  **Informasi Dokumen (H2):** Tabel berisi Versi, Penulis, Pentester, dan Klasifikasi (Rahasia).
-
-3.  **Lembar Pengesahan (H2):** Tabel baris tunggal untuk kolom "Dikeluarkan", "Diperiksa", dan "Disetujui".
-
-4.  **Ringkasan Eksekutif (H2):** Penjelasan naratif singkat mengenai temuan utama dan kondisi postur keamanan secara umum.
-
-5.  **Ruang Lingkup / Scope (H2):** Tabel berisi daftar Target, Deskripsi, dan IP Address/URL.
-
-6.  **Metodologi (H2):** Penjelasan singkat fase pengujian (Reconnaissance -> Initial Access -> Execution -> Reporting).
-
-7.  **Daftar Temuan / Findings (H2):** Setiap temuan harus memiliki tabel ringkasan:
-
-    | Field | Detail |
-    | :--- | :--- |
-    | **Issue Reference** | [ID, misal: HTPT-001] |
-    | **Issue Title** | [Judul Kerentanan] |
-    | **Affected Module** | \`[URL/IP]\` |
-    | **Severity Color** | \`[KODE_HEX_SESUAI_SKOR]\` |
-    | **CVSS 4.0 Score** | [Skor] / [Severity Label] |
-    | **Status** | Open/Closed |
-
-    Dilanjutkan dengan seksi:
-
-    -   **Deskripsi:** Penjelasan teknis temuan.
-    -   **Dampak:** Analisis risiko bagi bisnis/sistem.
-    -   **Rekomendasi:** Langkah-langkah perbaikan konkret.
-
-8.  **Penutup (H2):** Pernyataan profesional penutup.
-
-9.  **Appendix (H2):** Lampiran log atau output scan mentah menggunakan blok kode (fenced code blocks).
+1. description: Penjelasan teknis mendetail. Gunakan Markdown (bold, code blocks, lists). Jelaskan langkah eksploitasi.
+2. impact: Analisis dampak keamanan dan bisnis. Gunakan bullet points.
+3. recommendation: Langkah remediasi konkret. Gunakan numbered list.
+4. cvssVector: HARUS valid CVSS 4.0 vector string.
+5. cvssScore: Skor numerik sesuai vector.
+6. severity: Berdasarkan skor CVSS — Critical (9.0-10.0), High (7.0-8.9), Medium (4.0-6.9), Low (0.1-3.9), Info (0.0).
+7. location: IP address, URL, atau modul terdampak.
+8. referencesList: Daftar CWE/CVE dalam format Markdown list.
 
 ## LANGUAGE RULES
 
--   Gunakan bahasa Indonesia formal (EYD).
--   Pertahankan istilah teknis industri dalam bahasa Inggris (dicetak miring atau \`code block\`) jika tidak ada padanan yang pas.
--   Nada bicara objektif, faktual, dan tidak spekulatif.
+- Gunakan bahasa Indonesia formal (EYD).
+- Istilah teknis dalam bahasa Inggris (italic atau code block).
+- Nada objektif, faktual, tidak spekulatif.
 
-## DATA PROCESSING LOGIC
+## IMAGE ANALYSIS
 
--   Tentukan kode warna HEX secara akurat berdasarkan skor CVSS yang diinput.
--   Tampilkan kode HEX di dalam baris tabel "Severity Color" agar sistem aplikasi dapat merender warna tersebut secara dinamis.
--   Jika ada _screenshot_ yang disebutkan di input, berikan placeholder: \`![Bukti Eksploitasi: Nama_Temuan](url_gambar_placeholder)\`.
-
-## ADDITIONAL CONTEXT FOR AI REPORT GENERATION
-
-Ketika user memberikan gambar lampiran (PoC screenshots), Anda WAJIB:
--   Menganalisis setiap gambar dan mengidentifikasi temuan keamanan yang terlihat.
--   Menyertakan referensi gambar dalam laporan menggunakan sintaks: \`![Bukti: Nama_Temuan](nama_file_gambar)\`.
--   Mendeskripsikan temuan berdasarkan informasi visual dari gambar secara akurat dan profesional.
--   Jika gambar menunjukkan tool output (Burp Suite, Nmap, dll), ekstrak informasi teknis yang relevan.`;
+Jika ada gambar PoC, analisis dan integrasikan temuan visual ke deskripsi. Referensi gambar dengan sintaks: ![Bukti: Nama_Temuan](nama_file).`;
 
 /* ─── Helpers ───────────────────────────────────────── */
 
@@ -219,21 +180,20 @@ export async function generateReportWithAI(
     }
     const scopeNote = scopeLines.length > 0 ? `\n${scopeLines.join("\n")}` : "";
 
-    const promptText = `Buatkan laporan VAPT Markdown lengkap berdasarkan data berikut:
+    const promptText = `Analisis data kerentanan berikut dan hasilkan structured JSON finding:
 
-Judul Laporan: ${formData.title}
+Judul Temuan: ${formData.title}
 ${customerLine}
-Tanggal: ${new Date().toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" })}
 ${contextLine}
 Data temuan mentah (raw findings):
 ${formData.rawNotes}
 ${scopeNote}${imageNote}
 
-Aturan:
-- Output HARUS berupa Markdown mentah — JANGAN bungkus dalam code blocks tambahan.
-- Strukturkan data mentah menjadi temuan-temuan yang jelas dengan severity, CVSS score, deskripsi, dampak, dan rekomendasi.
-- Jika data temuan menyebutkan severity/skor, gunakan itu. Jika tidak, tentukan sendiri berdasarkan analisis.
-- Untuk field yang datanya tidak tersedia, gunakan placeholder yang sesuai.`;
+PENTING:
+- Output HARUS berupa JSON valid saja, tanpa code block wrapper.
+- Isi setiap field sesuai schema yang sudah ditentukan di system instruction.
+- Jika data menyebutkan severity/skor, gunakan itu. Jika tidak, tentukan sendiri.
+- Semua field Markdown (description, impact, recommendation, referencesList) harus menggunakan formatting Markdown yang baik.`;
 
     /* ── Build content parts (text + images) ── */
     // eslint-disable-next-line
@@ -268,9 +228,9 @@ Aturan:
         },
       });
 
-      const rawMarkdown = response.text?.trim();
+      const rawText = response.text?.trim();
 
-      if (!rawMarkdown) {
+      if (!rawText) {
         return {
           success: false,
           error: "Gemini returned an empty response. Please try again.",
@@ -278,22 +238,60 @@ Aturan:
       }
 
       // Clean up: remove any code block wrappers if present
-      const cleaned = rawMarkdown
-        .replace(/^```(?:markdown|md)?\s*\n?/i, "")
+      const cleaned = rawText
+        .replace(/^```(?:json)?\s*\n?/i, "")
         .replace(/\n?```\s*$/i, "")
         .trim();
+
+      // Parse JSON response
+      let parsed: {
+        description?: string;
+        impact?: string;
+        recommendation?: string;
+        cvssVector?: string;
+        cvssScore?: string;
+        severity?: string;
+        location?: string;
+        referencesList?: string;
+      };
+
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        console.error("Failed to parse AI JSON response:", cleaned.substring(0, 500));
+        return {
+          success: false,
+          error: "AI returned invalid JSON. Please try again.",
+        };
+      }
+
+      // Build markdownReport from structured fields for backward compatibility / preview
+      const markdownReport = [
+        `## Deskripsi\n\n${parsed.description || ""}`,
+        `## Dampak\n\n${parsed.impact || ""}`,
+        `## Rekomendasi\n\n${parsed.recommendation || ""}`,
+        `## Referensi\n\n${parsed.referencesList || ""}`,
+      ].join("\n\n---\n\n");
 
       /* ── Audit log ── */
       await audit({
         action: "report.ai_generate",
         userId: user.id,
-        detail: `AI report generated: "${formData.title}" (model: ${model}, images: ${imageCount})`,
+        detail: `AI finding generated: "${formData.title}" (model: ${model}, images: ${imageCount})`,
       });
 
       return {
         success: true,
         data: {
-          markdownReport: cleaned,
+          markdownReport,
+          description: parsed.description || "",
+          impact: parsed.impact || "",
+          recommendation: parsed.recommendation || "",
+          cvssVector: parsed.cvssVector || "",
+          cvssScore: parsed.cvssScore || "",
+          severity: parsed.severity || "Info",
+          location: parsed.location || "",
+          referencesList: parsed.referencesList || "",
         },
       };
     } catch (err) {
@@ -333,6 +331,14 @@ export interface SaveAIReportInput {
   findingSequence?: number;
   issueReferenceNumber?: string;
   severity?: string;
+  // Individual finding fields (matching manual finding form)
+  description?: string;
+  location?: string;
+  cvssVector?: string;
+  cvssScore?: string;
+  impact?: string;
+  recommendation?: string;
+  referencesList?: string;
 }
 
 export interface SaveAIReportResult {
@@ -361,8 +367,8 @@ export async function saveAIReport(
     if (!input.customerId.trim()) {
       return { success: false, error: "Customer is required." };
     }
-    if (!input.markdownReport.trim()) {
-      return { success: false, error: "Markdown report content is required." };
+    if (!input.description?.trim() && !input.markdownReport.trim()) {
+      return { success: false, error: "Finding description is required." };
     }
 
     // Only admin can set Closed
@@ -389,7 +395,13 @@ export async function saveAIReport(
         customerId: input.customerId,
         reportIdCustom,
         title: input.title,
-        description: input.markdownReport,
+        description: sanitizeMarkdown(input.description || input.markdownReport) || null,
+        location: input.location || null,
+        cvssVector: input.cvssVector || null,
+        cvssScore: input.cvssScore || null,
+        impact: sanitizeMarkdown(input.impact || "") || null,
+        recommendation: sanitizeMarkdown(input.recommendation || "") || null,
+        referencesList: input.referencesList || null,
         severity: (input.severity as "Critical" | "High" | "Medium" | "Low" | "Info") ?? "Info",
         status: input.status as "Open" | "Closed" | "Draft",
         createdBy: user.id,
@@ -445,16 +457,30 @@ export async function saveAIReport(
         await db.insert(reportAttachments).values(attachmentValues);
       }
 
-      /* ── 3. Generate PDF from Markdown ── */
+      /* ── 3. Generate PDF from structured fields ── */
       const delivDir = path.join(process.cwd(), "public", "deliverables");
       await fs.mkdir(delivDir, { recursive: true });
 
-      const bodyHtml = await marked.parse(input.markdownReport);
+      // Build markdown from individual fields for PDF
+      const pdfMarkdown = input.description
+        ? [
+            `# ${escapeHtml(input.title)}`,
+            `## Deskripsi\n\n${input.description}`,
+            input.location ? `**Lokasi:** ${input.location}` : "",
+            input.cvssVector ? `**CVSS Vector:** ${input.cvssVector}` : "",
+            input.cvssScore ? `**CVSS Score:** ${input.cvssScore} (${input.severity || "Info"})` : "",
+            input.impact ? `## Dampak\n\n${input.impact}` : "",
+            input.recommendation ? `## Rekomendasi\n\n${input.recommendation}` : "",
+            input.referencesList ? `## Referensi\n\n${input.referencesList}` : "",
+          ].filter(Boolean).join("\n\n")
+        : input.markdownReport;
+
+      const bodyHtml = await marked.parse(pdfMarkdown);
 
       // Debug: verify markdown→HTML conversion
-      if (bodyHtml === input.markdownReport || !bodyHtml.includes("<")) {
+      if (bodyHtml === pdfMarkdown || !bodyHtml.includes("<")) {
         console.warn("WARNING: marked.parse() did not convert markdown to HTML properly.");
-        console.warn("Input length:", input.markdownReport.length, "Output length:", bodyHtml.length);
+        console.warn("Input length:", pdfMarkdown.length, "Output length:", bodyHtml.length);
         console.warn("First 200 chars of output:", bodyHtml.substring(0, 200));
       }
 

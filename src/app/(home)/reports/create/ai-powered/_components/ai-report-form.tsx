@@ -34,6 +34,7 @@ import {
   AIWaveShimmer,
 } from "@/components/ui/ai-skeleton";
 import { generateReportWithAI, saveAIReport } from "@/lib/actions/ai-generate";
+import { isDevClient } from "@/lib/env";
 
 /* ─── Types ─────────────────────────────────────────── */
 
@@ -49,46 +50,6 @@ function generatePenDocId(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   return `PEN-DOC-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}`;
-}
-
-/** Build a full styled HTML document for the report preview iframe (srcdoc). */
-function buildPreviewHtml(bodyHtml: string): string {
-  return `<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      font-size: 11pt;
-      line-height: 1.6;
-      color: #1a1a2e;
-      padding: 24px 32px;
-    }
-    h1 { font-size: 18pt; color: #1a1a2e; margin-top: 28px; margin-bottom: 12px; border-bottom: 2px solid #5750F1; padding-bottom: 6px; }
-    h2 { font-size: 15pt; color: #1a1a2e; margin-top: 22px; margin-bottom: 10px; }
-    h3 { font-size: 13pt; color: #334155; margin-top: 18px; margin-bottom: 8px; }
-    h4 { font-size: 11pt; color: #475569; margin-top: 14px; margin-bottom: 6px; font-weight: 600; }
-    p { margin-bottom: 8px; text-align: justify; }
-    ul, ol { margin: 8px 0; padding-left: 24px; }
-    li { margin-bottom: 4px; }
-    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
-    th { background: #f8fafc; font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; color: #475569; }
-    td { padding: 8px 12px; border: 1px solid #e2e8f0; }
-    pre { background: #1e1e2e; color: #cdd6f4; padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-size: 9pt; margin: 8px 0; }
-    code:not(pre code) { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
-    blockquote { border-left: 3px solid #5750F1; padding: 8px 16px; margin: 12px 0; color: #475569; background: #f8fafc; }
-    hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
-    a { color: #5750F1; text-decoration: underline; }
-    img { max-width: 100%; height: auto; margin: 8px 0; border-radius: 4px; }
-    strong { font-weight: 700; }
-    em { font-style: italic; }
-    div[style*="page-break"] { margin: 24px 0; border-top: 2px dashed #e2e8f0; }
-  </style>
-</head>
-<body>${bodyHtml}</body>
-</html>`;
 }
 
 /* ─── Animation Variants ────────────────────────────── */
@@ -119,6 +80,17 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const { isAdmin } = useRole();
   const { addToast } = useToast();
 
+  // ─── Dev dummy data (same as manual finding form) ───
+  const devDefaults = isDevClient ? {
+    title: "Sensitive Information Disclosure via Unauthenticated SMB Null Session",
+    serviceAffected: "SMB",
+    findingSequence: "1",
+    severity: "High",
+    scopeName: "192.1.2.95 - H2H/API Server CIRT KSEI",
+    aiContext: "Berdasarkan hasil Pemindaian menggunakan Nmap mengungkap adanya port 445 (microsoft-ds) yang aktif.\n\nMelakukan pengujian untuk melihat apakah server memberikan izin kepada siapa pun untuk melihat daftar folder di dalamnya tanpa perlu melakukan proses login.\n\nSetelah mendapatkan list direktori, tim mencoba masuk ke salah satu share yang terdeteksi untuk membuktikan bahwa file dapat diakses dan dibaca. Dengan perintah ls menampilkan ratusan file instalasi, dokumen backup, dan data operasional internal.",
+    status: "Open",
+  } : null;
+
   /* ── State ── */
   const [step, setStep] = useState<GenerationStep>("idle");
   const [errorShake, setErrorShake] = useState(false);
@@ -126,18 +98,28 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const [markdownReport, setMarkdownReport] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Structured AI output fields (matching manual finding form)
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiImpact, setAiImpact] = useState("");
+  const [aiRecommendation, setAiRecommendation] = useState("");
+  const [aiCvssVector, setAiCvssVector] = useState("");
+  const [aiCvssScore, setAiCvssScore] = useState("");
+  const [aiSeverity, setAiSeverity] = useState("");
+  const [aiLocation, setAiLocation] = useState("");
+  const [aiReferencesList, setAiReferencesList] = useState("");
+
   // Identity & Metadata
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(devDefaults?.title ?? "");
   const [reportId] = useState(generatePenDocId);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("Open");
+  const [selectedStatus, setSelectedStatus] = useState(devDefaults?.status ?? "Open");
 
   // AI Raw Input
-  const [aiContext, setAiContext] = useState("");
+  const [aiContext, setAiContext] = useState(devDefaults?.aiContext ?? "");
   const [pocImages, setPocImages] = useState<PoCImage[]>([]);
 
   // Scope
-  const [scopeName, setScopeName] = useState("");
+  const [scopeName, setScopeName] = useState(devDefaults?.scopeName ?? "");
 
   // Issue Reference Builder
   const customerCodeMap = useMemo(() => {
@@ -146,9 +128,9 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     return map;
   }, [customers]);
   const clientCode = selectedCustomerId ? (customerCodeMap[selectedCustomerId] ?? "") : "";
-  const [refSeverity, setRefSeverity] = useState("Info");
-  const [serviceAffected, setServiceAffected] = useState("");
-  const [findingSeq, setFindingSeq] = useState("");
+  const [refSeverity, setRefSeverity] = useState(devDefaults?.severity ?? "Info");
+  const [serviceAffected, setServiceAffected] = useState(devDefaults?.serviceAffected ?? "");
+  const [findingSeq, setFindingSeq] = useState(devDefaults?.findingSequence ?? "");
 
   const SEVERITY_LETTER: Record<string, string> = {
     Critical: "C", High: "H", Medium: "M", Low: "L", Info: "I",
@@ -172,13 +154,6 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
 
   const outputsRef = useRef<HTMLDivElement>(null);
 
-  /* ── Build styled HTML preview from markdown ── */
-  const previewHtml = useMemo(() => {
-    if (!markdownReport) return "";
-    const bodyHtml = marked.parse(markdownReport, { async: false }) as string;
-    return buildPreviewHtml(bodyHtml);
-  }, [markdownReport]);
-
   /* ── Validation ── */
   const isFormValid = title.trim().length > 0;
 
@@ -192,6 +167,14 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
 
     setStep("generating");
     setMarkdownReport("");
+    setAiDescription("");
+    setAiImpact("");
+    setAiRecommendation("");
+    setAiCvssVector("");
+    setAiCvssScore("");
+    setAiSeverity("");
+    setAiLocation("");
+    setAiReferencesList("");
     setErrorShake(false);
     setErrorMessage("");
 
@@ -216,6 +199,20 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
       }
 
       setMarkdownReport(result.data.markdownReport);
+      setAiDescription(result.data.description);
+      setAiImpact(result.data.impact);
+      setAiRecommendation(result.data.recommendation);
+      setAiCvssVector(result.data.cvssVector);
+      setAiCvssScore(result.data.cvssScore);
+      setAiSeverity(result.data.severity);
+      setAiLocation(result.data.location);
+      setAiReferencesList(result.data.referencesList);
+
+      // Update severity in the issue reference builder
+      if (result.data.severity) {
+        setRefSeverity(result.data.severity);
+      }
+
       setStep("done");
 
       // Scroll to outputs
@@ -237,7 +234,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
 
   /* ── Save Report handler ── */
   const handleSaveReport = useCallback(async () => {
-    if (!markdownReport || saving) return;
+    if ((!markdownReport && !aiDescription) || saving) return;
 
     setSaving(true);
     try {
@@ -259,7 +256,15 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
         serviceAffected: serviceAffected.trim() || undefined,
         findingSequence: findingSeq ? parseInt(findingSeq, 10) || undefined : undefined,
         issueReferenceNumber: issueReferenceNumber || undefined,
-        severity: refSeverity,
+        severity: aiSeverity || refSeverity,
+        // Individual finding fields from AI
+        description: aiDescription || undefined,
+        location: aiLocation || undefined,
+        cvssVector: aiCvssVector || undefined,
+        cvssScore: aiCvssScore || undefined,
+        impact: aiImpact || undefined,
+        recommendation: aiRecommendation || undefined,
+        referencesList: aiReferencesList || undefined,
       });
 
       if (!result.success) {
@@ -274,7 +279,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     } finally {
       setSaving(false);
     }
-  }, [markdownReport, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, addToast, router, clientCode, serviceAffected, findingSeq, issueReferenceNumber, refSeverity]);
+  }, [markdownReport, aiDescription, saving, title, reportId, selectedCustomerId, selectedStatus, pocImages, addToast, router, clientCode, serviceAffected, findingSeq, issueReferenceNumber, refSeverity, aiSeverity, aiLocation, aiCvssVector, aiCvssScore, aiImpact, aiRecommendation, aiReferencesList]);
 
   /* ── Glass card helper ── */
   const glassCard = cn(
@@ -611,15 +616,15 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                   <Sparkles size={16} className="text-purple-500" />
                 </motion.span>
                 <span className="text-sm font-medium text-dark dark:text-white">
-                  AI is analyzing your findings{pocImages.length > 0 ? ` and ${pocImages.length} PoC image(s)` : ""} and crafting the report…
+                  AI is analyzing your findings{pocImages.length > 0 ? ` and ${pocImages.length} PoC image(s)` : ""} and generating structured output…
                 </span>
               </div>
               <div className="space-y-4">
                 {[
-                  "Title & Document Info",
-                  "Executive Summary",
-                  "Findings & Analysis",
-                  "Recommendations & Appendix",
+                  "Description & Location",
+                  "CVSS & Severity",
+                  "Impact Analysis",
+                  "Recommendations & References",
                 ].map((label, i) => (
                   <div
                     key={label}
@@ -681,7 +686,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
            GENERATED OUTPUT — PDF Preview
          ════════════════════════════════════════════════ */}
       <AnimatePresence>
-        {step === "done" && markdownReport && (
+        {step === "done" && (markdownReport || aiDescription) && (
           <motion.div
             ref={outputsRef}
             variants={outputRevealVariants}
@@ -694,31 +699,95 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent dark:via-purple-600/40" />
               <span className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400">
                 <Sparkles size={12} />
-                AI-Generated Report
+                AI-Generated Finding
               </span>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent dark:via-purple-600/40" />
             </div>
 
-            {/* PDF Preview card */}
+            {/* Structured fields preview */}
             <div className={cn(glassCard)}>
-              {/* Toolbar */}
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
                   <FileText size={16} />
                 </div>
                 <h3 className="text-base font-semibold text-dark dark:text-white">
-                  Generated VAPT Report — PDF Preview
+                  Generated Finding — Preview
                 </h3>
               </div>
 
-              {/* Report Preview (rendered HTML) */}
-              <div className="overflow-hidden rounded-lg border border-stroke dark:border-dark-3">
-                <iframe
-                  srcDoc={previewHtml}
-                  title="AI Report Preview"
-                  className="h-[700px] w-full bg-white"
-                  sandbox="allow-same-origin"
-                />
+              <div className="space-y-4">
+                {/* Severity & CVSS */}
+                <div className="flex flex-wrap gap-3">
+                  {aiSeverity && (
+                    <span className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold",
+                      aiSeverity === "Critical" && "bg-red-900/20 text-red-600 dark:text-red-400",
+                      aiSeverity === "High" && "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400",
+                      aiSeverity === "Medium" && "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
+                      aiSeverity === "Low" && "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400",
+                      aiSeverity === "Info" && "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+                    )}>
+                      Severity: {aiSeverity}
+                    </span>
+                  )}
+                  {aiCvssScore && (
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-dark-5 dark:bg-dark-3 dark:text-dark-6">
+                      CVSS: {aiCvssScore}
+                    </span>
+                  )}
+                  {aiLocation && (
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-dark-5 dark:bg-dark-3 dark:text-dark-6">
+                      Location: {aiLocation}
+                    </span>
+                  )}
+                </div>
+
+                {aiCvssVector && (
+                  <div className="rounded-lg bg-gray-1 p-3 dark:bg-dark-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-dark-5 dark:text-dark-6 mb-1">CVSS Vector</p>
+                    <p className="font-mono text-xs text-dark dark:text-white break-all">{aiCvssVector}</p>
+                  </div>
+                )}
+
+                {/* Description */}
+                {aiDescription && (
+                  <div>
+                    <h4 className="mb-2 text-sm font-semibold text-dark dark:text-white">Deskripsi</h4>
+                    <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border border-stroke/50 bg-white/50 p-4 dark:border-dark-3/50 dark:bg-white/[0.02]">
+                      <div dangerouslySetInnerHTML={{ __html: marked.parse(aiDescription, { async: false }) as string }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Impact */}
+                {aiImpact && (
+                  <div>
+                    <h4 className="mb-2 text-sm font-semibold text-dark dark:text-white">Dampak</h4>
+                    <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border border-stroke/50 bg-white/50 p-4 dark:border-dark-3/50 dark:bg-white/[0.02]">
+                      <div dangerouslySetInnerHTML={{ __html: marked.parse(aiImpact, { async: false }) as string }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendation */}
+                {aiRecommendation && (
+                  <div>
+                    <h4 className="mb-2 text-sm font-semibold text-dark dark:text-white">Rekomendasi</h4>
+                    <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border border-stroke/50 bg-white/50 p-4 dark:border-dark-3/50 dark:bg-white/[0.02]">
+                      <div dangerouslySetInnerHTML={{ __html: marked.parse(aiRecommendation, { async: false }) as string }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* References */}
+                {aiReferencesList && (
+                  <div>
+                    <h4 className="mb-2 text-sm font-semibold text-dark dark:text-white">Referensi</h4>
+                    <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border border-stroke/50 bg-white/50 p-4 dark:border-dark-3/50 dark:bg-white/[0.02]">
+                      <div dangerouslySetInnerHTML={{ __html: marked.parse(aiReferencesList, { async: false }) as string }} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -734,6 +803,14 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                 onClick={() => {
                   setStep("idle");
                   setMarkdownReport("");
+                  setAiDescription("");
+                  setAiImpact("");
+                  setAiRecommendation("");
+                  setAiCvssVector("");
+                  setAiCvssScore("");
+                  setAiSeverity("");
+                  setAiLocation("");
+                  setAiReferencesList("");
                 }}
                 className="rounded-lg border border-stroke px-6 py-2.5 text-sm font-medium text-dark transition-colors hover:bg-gray-2 dark:border-dark-3 dark:text-white dark:hover:bg-dark-3"
               >
@@ -753,7 +830,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                 ) : (
                   <>
                     <Save size={16} />
-                    Save Report
+                    Save Finding
                   </>
                 )}
               </button>
