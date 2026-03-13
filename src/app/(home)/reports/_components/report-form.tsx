@@ -143,6 +143,9 @@ export default function ReportForm({
 
   // ─── Issue Reference Builder (React state) ───
   const [clientCode, setClientCode] = useState(val.clientCode);
+  const [refPrefix, setRefPrefix] = useState<"HTPT" | "HTVA">(
+    report?.issueReferenceNumber?.startsWith("HTVA") ? "HTVA" : "HTPT"
+  );
   const [severity, setSeverity] = useState(val.severity);
   const [serviceAffected, setServiceAffected] = useState(val.serviceAffected);
   const [findingSeq, setFindingSeq] = useState(val.findingSequence);
@@ -154,8 +157,8 @@ export default function ReportForm({
     const seq = findingSeq ? String(parseInt(findingSeq, 10) || 0).padStart(3, "0") : "001";
 
     if (!cc && !svc) return "";
-    return `HTPT-${cc || "XX"}-${sl}-${svc || "SVC"}-${seq}`;
-  }, [clientCode, severity, serviceAffected, findingSeq]);
+    return `${refPrefix}-${cc || "XX"}-${sl}-${svc || "SVC"}-${seq}`;
+  }, [clientCode, severity, serviceAffected, findingSeq, refPrefix]);
 
   // Key forces React to re-mount form inputs with updated defaultValue
   const formKey = state && !state.success
@@ -186,14 +189,32 @@ export default function ReportForm({
             Issue Reference Number
           </p>
           <p className="font-mono text-2xl font-bold tracking-wide text-primary">
-            {issueReferenceNumber || "HTPT-XX-I-SVC-001"}
+            {issueReferenceNumber || `${refPrefix}-XX-I-SVC-001`}
           </p>
           <p className="mt-1 text-xs text-dark-5 dark:text-dark-6">
-            Format: HTPT-&#123;ClientCode&#125;-&#123;Severity&#125;-&#123;Service&#125;-&#123;Sequence&#125;
+            Format: &#123;Prefix&#125;-&#123;ClientCode&#125;-&#123;Severity&#125;-&#123;Service&#125;-&#123;Sequence&#125;
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Prefix */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+              Prefix
+            </label>
+            <select
+              value={refPrefix}
+              onChange={(e) => {
+                setRefPrefix(e.target.value as "HTPT" | "HTVA");
+                markDirty();
+              }}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-2.5 text-sm text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:bg-gray-dark dark:text-white"
+            >
+              <option value="HTPT">HTPT — Pentest</option>
+              <option value="HTVA">HTVA — VA Scan</option>
+            </select>
+          </div>
+
           {/* Client Code */}
           <div>
             <label className="mb-2 block text-sm font-medium text-dark dark:text-white">

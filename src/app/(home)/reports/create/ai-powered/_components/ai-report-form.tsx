@@ -156,6 +156,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     return map;
   }, [customers]);
   const clientCode = selectedCustomerId ? (customerCodeMap[selectedCustomerId] ?? "") : "";
+  const [refPrefix, setRefPrefix] = useState<"HTPT" | "HTVA">("HTPT");
   const [refSeverity, setRefSeverity] = useState(devDefaults?.severity ?? "Info");
   const [serviceAffected, setServiceAffected] = useState(devDefaults?.serviceAffected ?? "");
   const [findingSeq, setFindingSeq] = useState(devDefaults?.findingSequence ?? "");
@@ -180,8 +181,8 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
       ? String(parseInt(findingSeq, 10) || 0).padStart(3, "0")
       : "001";
     if (!cc && !svc) return "";
-    return `HTPT-${cc || "XX"}-${sl}-${svc || "SVC"}-${seq}`;
-  }, [clientCode, refSeverity, serviceAffected, findingSeq]);
+    return `${refPrefix}-${cc || "XX"}-${sl}-${svc || "SVC"}-${seq}`;
+  }, [clientCode, refSeverity, serviceAffected, findingSeq, refPrefix]);
 
   const customerOptions = customers.map((c) => ({
     value: c.id,
@@ -449,11 +450,25 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
                 Issue Reference Number
               </p>
               <p className="font-mono text-lg font-bold tracking-wide text-primary">
-                {issueReferenceNumber || "HTPT-XX-I-SVC-001"}
+                {issueReferenceNumber || `${refPrefix}-XX-I-SVC-001`}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-dark dark:text-white">
+                  Prefix
+                </label>
+                <select
+                  value={refPrefix}
+                  onChange={(e) => setRefPrefix(e.target.value as "HTPT" | "HTVA")}
+                  className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-xs text-dark outline-none transition focus:border-primary dark:border-dark-3 dark:bg-gray-dark dark:text-white"
+                >
+                  <option value="HTPT">HTPT — Pentest</option>
+                  <option value="HTVA">HTVA — VA Scan</option>
+                </select>
+              </div>
+
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-dark dark:text-white">
                   Client Code
