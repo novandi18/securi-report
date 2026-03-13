@@ -104,7 +104,7 @@ export default function FindingForm({
     cvssScore: v?.cvssScore ?? "",
     impact: v?.impact ?? devDefaults?.impact ?? "",
     recommendation: v?.recommendation ?? devDefaults?.recommendation ?? "",
-    status: v?.status ?? devDefaults?.status ?? "Draft",
+    status: v?.status ?? devDefaults?.status ?? "Open",
   };
 
   // ─── Issue Reference Builder (React state) ───
@@ -340,18 +340,10 @@ export default function FindingForm({
               label="Status"
               name="status"
               defaultValue={val.status}
-              items={
-                isAdmin
-                  ? [
-                      { value: "Draft", label: "Draft" },
-                      { value: "Open", label: "Open" },
-                      { value: "Closed", label: "Closed" },
-                    ]
-                  : [
-                      { value: "Draft", label: "Draft" },
-                      { value: "Open", label: "Open" },
-                    ]
-              }
+              items={[
+                { value: "Open", label: "Open" },
+                { value: "Closed", label: "Closed" },
+              ]}
             />
           </div>
         </div>

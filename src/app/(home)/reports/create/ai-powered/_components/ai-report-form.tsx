@@ -130,7 +130,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
   const [title, setTitle] = useState("");
   const [reportId] = useState(generatePenDocId);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("Draft");
+  const [selectedStatus, setSelectedStatus] = useState("Open");
 
   // AI Raw Input
   const [aiContext, setAiContext] = useState("");
@@ -365,20 +365,12 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
             <Select
               label="Status"
               name="status"
-              defaultValue="Draft"
+              defaultValue="Open"
               onChange={setSelectedStatus}
-              items={
-                isAdmin
-                  ? [
-                      { value: "Draft", label: "Draft" },
-                      { value: "Open", label: "Open (Submit)" },
-                      { value: "Closed", label: "Closed" },
-                    ]
-                  : [
-                      { value: "Draft", label: "Draft" },
-                      { value: "Open", label: "Open (Submit)" },
-                    ]
-              }
+              items={[
+                { value: "Open", label: "Open" },
+                { value: "Closed", label: "Closed" },
+              ]}
             />
 
             {/* Scope */}
