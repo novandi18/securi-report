@@ -11,9 +11,11 @@ import { eq, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { syncDocument, removeDocument, INDEX } from "@/lib/meilisearch";
 import { existsSync } from "fs";
-import { unlink } from "fs/promises";
+import { unlink, readFile, mkdir } from "fs/promises";
 import path from "path";
+import crypto from "crypto";
 import { sanitizeMarkdown, audit, checkDeleteRateLimit } from "@/lib/security";
+import { generateReportPDF, type ReportPDFData } from "@/lib/pdf/generate-report-pdf";
 
 export type ActionResult = {
   success: boolean;
@@ -317,6 +319,73 @@ export async function createReportAction(
       }
     }
 
+    // ── Generate PDF deliverable ──
+    if (created) {
+      try {
+        // Read linked attachments as base64 data URIs
+        const allAttachments = await db
+          .select({
+            fileName: reportAttachments.fileName,
+            fileUrl: reportAttachments.fileUrl,
+            mimeType: reportAttachments.mimeType,
+          })
+          .from(reportAttachments)
+          .where(eq(reportAttachments.reportId, created.id));
+
+        const imageAttachments: ReportPDFData["attachments"] = [];
+        for (const a of allAttachments.filter((att) => att.mimeType.startsWith("image/"))) {
+          try {
+            const absPath = path.join(process.cwd(), "public", a.fileUrl);
+            const fileBuffer = await readFile(absPath);
+            const base64 = fileBuffer.toString("base64");
+            imageAttachments!.push({
+              fileName: a.fileName,
+              dataUri: `data:${a.mimeType};base64,${base64}`,
+              mimeType: a.mimeType,
+            });
+          } catch (err) {
+            console.error(`Failed to read attachment file: ${a.fileUrl}`, err);
+          }
+        }
+
+        const pdfData: ReportPDFData = {
+          id: created.id,
+          reportIdCustom,
+          title: parsed.data.title,
+          customerName: created.customerName,
+          issueReferenceNumber: issueRef,
+          severity: parsed.data.severity,
+          location: parsed.data.location ?? null,
+          description: sanitizeMarkdown(parsed.data.description ?? "") || null,
+          pocText: sanitizeMarkdown(parsed.data.pocText ?? "") || null,
+          referencesList: parsed.data.referencesList ?? null,
+          cvssVector: parsed.data.cvssVector ?? null,
+          cvssScore: parsed.data.cvssScore ?? null,
+          impact: sanitizeMarkdown(parsed.data.impact ?? "") || null,
+          recommendation: sanitizeMarkdown(parsed.data.recommendation ?? "") || null,
+          status: parsed.data.status,
+          createdAt: new Date(),
+          attachments: imageAttachments,
+        };
+
+        const pdfUrl = await generateReportPDF(pdfData);
+
+        const pdfPath = path.join(process.cwd(), "public", pdfUrl);
+        const pdfBuffer = await readFile(pdfPath);
+        const sha256Hash = crypto.createHash("sha256").update(pdfBuffer).digest("hex");
+
+        await db.insert(deliverables).values({
+          reportId: created.id,
+          format: "PDF",
+          fileUrl: pdfUrl,
+          sha256Hash,
+          generatedBy: session.user.id,
+        });
+      } catch (pdfErr) {
+        console.error("Failed to generate PDF (non-blocking):", pdfErr);
+      }
+    }
+
     revalidatePath("/reports");
     return { success: true };
   } catch (error: any) {
@@ -556,6 +625,73 @@ export async function updateReportAction(
       } catch (attErr) {
         console.error("Failed to sync attachments (non-blocking):", attErr);
       }
+    }
+
+    // ── Regenerate PDF deliverable ──
+    try {
+      // Read all current attachments
+      const allAttachments = await db
+        .select({
+          fileName: reportAttachments.fileName,
+          fileUrl: reportAttachments.fileUrl,
+          mimeType: reportAttachments.mimeType,
+        })
+        .from(reportAttachments)
+        .where(eq(reportAttachments.reportId, parsed.data.id));
+
+      const imageAttachments: ReportPDFData["attachments"] = [];
+      for (const a of allAttachments.filter((att) => att.mimeType.startsWith("image/"))) {
+        try {
+          const absPath = path.join(process.cwd(), "public", a.fileUrl);
+          const fileBuffer = await readFile(absPath);
+          const base64 = fileBuffer.toString("base64");
+          imageAttachments!.push({
+            fileName: a.fileName,
+            dataUri: `data:${a.mimeType};base64,${base64}`,
+            mimeType: a.mimeType,
+          });
+        } catch (err) {
+          console.error(`Failed to read attachment file: ${a.fileUrl}`, err);
+        }
+      }
+
+      const pdfData: ReportPDFData = {
+        id: parsed.data.id,
+        reportIdCustom: parsed.data.reportIdCustom ?? null,
+        title: parsed.data.title,
+        customerName: updated?.customerName ?? "",
+        issueReferenceNumber: issueRef,
+        severity: parsed.data.severity,
+        location: parsed.data.location ?? null,
+        description: sanitizeMarkdown(parsed.data.description ?? "") || null,
+        pocText: sanitizeMarkdown(parsed.data.pocText ?? "") || null,
+        referencesList: parsed.data.referencesList ?? null,
+        cvssVector: parsed.data.cvssVector ?? null,
+        cvssScore: parsed.data.cvssScore ?? null,
+        impact: sanitizeMarkdown(parsed.data.impact ?? "") || null,
+        recommendation: sanitizeMarkdown(parsed.data.recommendation ?? "") || null,
+        status: parsed.data.status,
+        createdAt: new Date(),
+        attachments: imageAttachments,
+      };
+
+      const pdfUrl = await generateReportPDF(pdfData);
+
+      const pdfPath = path.join(process.cwd(), "public", pdfUrl);
+      const pdfBuffer = await readFile(pdfPath);
+      const sha256Hash = crypto.createHash("sha256").update(pdfBuffer).digest("hex");
+
+      // Delete old deliverables for this report, then insert new one
+      await db.delete(deliverables).where(eq(deliverables.reportId, parsed.data.id));
+      await db.insert(deliverables).values({
+        reportId: parsed.data.id,
+        format: "PDF",
+        fileUrl: pdfUrl,
+        sha256Hash,
+        generatedBy: session.user.id,
+      });
+    } catch (pdfErr) {
+      console.error("Failed to regenerate PDF (non-blocking):", pdfErr);
     }
 
     revalidatePath("/reports");
