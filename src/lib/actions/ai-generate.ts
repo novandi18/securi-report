@@ -97,7 +97,11 @@ Output Anda HARUS selalu berupa JSON valid tanpa code block wrapper, tanpa backt
 
 ## IMAGE ANALYSIS
 
-Jika ada gambar PoC, analisis dan integrasikan temuan visual ke deskripsi. Referensi gambar dengan sintaks: ![Bukti: Nama_Temuan](nama_file).`;
+Jika ada gambar PoC, analisis dan integrasikan temuan visual ke deskripsi.
+Gunakan TEPAT sintaks berikut untuk menyisipkan gambar: ![upload]["nama_file.png"]
+Contoh: ![upload]["nmap_scan_result.png"]
+Gunakan nama file PERSIS seperti yang diberikan di label gambar.
+Letakkan referensi gambar di posisi yang relevan dalam deskripsi, dekat dengan penjelasan terkait.`;
 
 /* ─── Helpers ───────────────────────────────────────── */
 
@@ -121,6 +125,23 @@ async function readImageAsBase64(fileUrl: string): Promise<{ data: string; mimeT
     data: buffer.toString("base64"),
     mimeType,
   };
+}
+
+/**
+ * Resolve ![upload]["filename.png"] references in markdown
+ * to standard markdown image syntax with absolute file:// paths for PDF.
+ */
+function resolveUploadRefsForPdf(
+  content: string,
+  attachmentMap: Map<string, string>,
+): string {
+  return content.replace(
+    /!\[upload\]\["([^"]+)"\]/g,
+    (_match, fileName: string) => {
+      const absUrl = attachmentMap.get(fileName);
+      return absUrl ? `![${fileName}](${absUrl})` : `![${fileName}]()`;
+    },
+  );
 }
 
 /* ─── Server Action ─────────────────────────────────── */
@@ -160,8 +181,9 @@ export async function generateReportWithAI(
       : "";
 
     const imageCount = formData.pocImages?.length ?? 0;
+    const imageFileNames = formData.pocImages?.map((img) => img.fileName) ?? [];
     const imageNote = imageCount > 0
-      ? `\n${imageCount} gambar PoC (Proof of Concept) dilampirkan. Analisis setiap gambar dan integrasikan temuan visual ke dalam laporan. Referensi setiap gambar dengan nama filenya.`
+      ? `\n${imageCount} gambar PoC (Proof of Concept) dilampirkan.\nNama file gambar: ${imageFileNames.join(", ")}\nSisipkan gambar ke dalam field "description" menggunakan sintaks: ![upload]["nama_file.png"]\nLetakkan setiap gambar di posisi yang relevan dalam deskripsi.`
       : "";
 
     // Build scope context from ISSA worksheet data
@@ -465,8 +487,19 @@ export async function saveAIReport(
       const pdfFileName = `${reportIdCustom.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
       const pdfFileUrl = `/deliverables/${pdfFileName}`;
 
+      // Build attachment lookup for resolving ![upload]["file"] references
+      const attachmentMap = new Map<string, string>();
+      if (input.pocImages && input.pocImages.length > 0) {
+        for (const img of input.pocImages) {
+          const absPath = path.join(process.cwd(), "public", img.fileUrl);
+          if (existsSync(absPath)) {
+            attachmentMap.set(img.fileName, `file://${absPath}`);
+          }
+        }
+      }
+
       // Build markdown from individual fields for PDF
-      const pdfMarkdown = input.description
+      const pdfMarkdownRaw = input.description
         ? [
             `# ${escapeHtml(input.title)}`,
             `## Deskripsi\n\n${input.description}`,
@@ -478,6 +511,9 @@ export async function saveAIReport(
             input.referencesList ? `## Referensi\n\n${input.referencesList}` : "",
           ].filter(Boolean).join("\n\n")
         : input.markdownReport;
+
+      // Resolve ![upload]["filename"] → standard markdown images with absolute file:// paths
+      const pdfMarkdown = resolveUploadRefsForPdf(pdfMarkdownRaw, attachmentMap);
 
       const bodyHtml = await marked.parse(pdfMarkdown);
 
@@ -492,7 +528,7 @@ export async function saveAIReport(
 
       const browser = await puppeteer.launch({
         headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--allow-file-access-from-files"],
       });
 
       try {

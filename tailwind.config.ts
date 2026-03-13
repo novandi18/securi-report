@@ -365,6 +365,11 @@ const config: Config = {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
+        "highlight-fade": {
+          "0%": { backgroundColor: "rgb(87 80 241 / 0.15)" },
+          "50%": { backgroundColor: "rgb(87 80 241 / 0.15)" },
+          "100%": { backgroundColor: "transparent" },
+        },
       },
       animation: {
         linspin: "linspin 1568.2353ms linear infinite",
@@ -385,6 +390,7 @@ const config: Config = {
         line3: "line 7s infinite linear",
         "fade-slide-up": "fade-slide-up 200ms ease-out both",
         "fade-in": "fade-in 200ms ease-out both",
+        "highlight-fade": "highlight-fade 3s ease-out forwards",
       },
     },
   },

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -32,6 +32,7 @@ export interface FindingRow {
   updatedAt: Date | null;
   customerName: string;
   creatorUsername: string | null;
+  pdfUrl: string | null;
 }
 
 interface FindingsClientProps {
@@ -65,6 +66,28 @@ export default function FindingsClient({ findings }: FindingsClientProps) {
   const { canEditReports, isAdmin, isEditor, user } = useRole();
   const { addToast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ─── Highlight newly created finding ───
+  const highlightId = searchParams.get("highlight");
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(highlightId);
+
+  useEffect(() => {
+    if (highlightId) {
+      // Scroll to highlighted row
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 200);
+      // Clear highlight after animation
+      const timer = setTimeout(() => setHighlightedId(null), 3000);
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete("highlight");
+      window.history.replaceState({}, "", url.pathname + url.search);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightId]);
 
   // ─── Filters ───
   const [searchQuery, setSearchQuery] = useState("");
@@ -275,7 +298,11 @@ export default function FindingsClient({ findings }: FindingsClientProps) {
                 const badge = STATUS_BADGE[status] ?? STATUS_BADGE.Draft;
 
                 return (
-                  <ResizableTableRow key={finding.id}>
+                  <ResizableTableRow
+                    key={finding.id}
+                    ref={finding.id === highlightId ? highlightRef : undefined}
+                    className={finding.id === highlightedId ? "animate-highlight-fade bg-primary/10 dark:bg-primary/20" : ""}
+                  >
                     <ResizableTableCell className="pl-5 font-mono text-sm text-dark dark:text-white">
                       {finding.reportIdCustom || "\u2014"}
                     </ResizableTableCell>
@@ -318,6 +345,16 @@ export default function FindingsClient({ findings }: FindingsClientProps) {
                     {canEditReports && (
                       <ResizableTableCell className="pr-5 text-right">
                         <div className="flex justify-end gap-2">
+                          {finding.pdfUrl && (
+                            <a
+                              href={finding.pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-md px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-500/10 dark:text-emerald-400"
+                            >
+                              View PDF
+                            </a>
+                          )}
                           {canEdit(finding) && (
                             <Link
                               href={`/reports/${finding.id}/edit`}

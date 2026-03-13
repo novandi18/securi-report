@@ -7,7 +7,7 @@ import {
   reportCreateSchema,
   reportUpdateSchema,
 } from "@/lib/validations/report";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { syncDocument, removeDocument, INDEX } from "@/lib/meilisearch";
 import { existsSync } from "fs";
@@ -55,6 +55,11 @@ export async function getReportsAction() {
         updatedAt: reports.updatedAt,
         customerName: customers.name,
         creatorUsername: users.username,
+        pdfUrl: sql<string | null>`(
+          SELECT d.file_url FROM deliverables d
+          WHERE d.report_id = ${reports.id} AND d.format = 'PDF'
+          ORDER BY d.generated_at DESC LIMIT 1
+        )`.as("pdf_url"),
       })
       .from(reports)
       .innerJoin(customers, eq(reports.customerId, customers.id))
