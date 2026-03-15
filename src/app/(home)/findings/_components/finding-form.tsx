@@ -126,7 +126,6 @@ export default function FindingForm({
     const svc = serviceAffected.toUpperCase().trim();
     const seq = findingSeq ? String(parseInt(findingSeq, 10) || 0).padStart(3, "0") : "001";
 
-    if (!cc && !svc) return "";
     return `${refPrefix}-${cc || "XX"}-${sl}-${svc || "SVC"}-${seq}`;
   }, [clientCode, severity, serviceAffected, findingSeq, refPrefix]);
 

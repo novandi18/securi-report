@@ -88,6 +88,11 @@ const outputRevealVariants = {
   },
 };
 
+/* ─── Severity → single letter map ─── */
+const SEVERITY_LETTER: Record<string, string> = {
+  Critical: "C", High: "H", Medium: "M", Low: "L", Info: "I",
+};
+
 /* ─── Main Component ────────────────────────────────── */
 
 export default function AIReportForm({ customers }: AIReportFormProps) {
@@ -165,13 +170,7 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     setCvssVector(vector);
     setCvssScore(score);
     setCvssSeverity(severity);
-    // Sync severity to issue reference builder
-    if (severity) setRefSeverity(severity);
   }, []);
-
-  const SEVERITY_LETTER: Record<string, string> = {
-    Critical: "C", High: "H", Medium: "M", Low: "L", Info: "I",
-  };
 
   const issueReferenceNumber = useMemo(() => {
     const cc = clientCode.toUpperCase().trim();
@@ -180,7 +179,6 @@ export default function AIReportForm({ customers }: AIReportFormProps) {
     const seq = findingSeq
       ? String(parseInt(findingSeq, 10) || 0).padStart(3, "0")
       : "001";
-    if (!cc && !svc) return "";
     return `${refPrefix}-${cc || "XX"}-${sl}-${svc || "SVC"}-${seq}`;
   }, [clientCode, refSeverity, serviceAffected, findingSeq, refPrefix]);
 
